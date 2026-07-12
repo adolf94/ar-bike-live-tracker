@@ -6,6 +6,7 @@ from typing import List, Optional
 
 from azure.cosmos import CosmosClient
 from azure.cosmos.exceptions import CosmosResourceNotFoundError
+from azure.identity import DefaultAzureCredential
 
 from models.documents import TelemetryDocument
 
@@ -24,8 +25,19 @@ class CosmosService:
         connection_string: str,
         database_name: str,
         container_name: str,
+        endpoint: str = None,
     ):
-        self._client = CosmosClient.from_connection_string(connection_string)
+        conn_str = (connection_string or "").strip()
+        end_pt = (endpoint or "").strip()
+
+        if conn_str:
+            self._client = CosmosClient.from_connection_string(conn_str)
+        elif end_pt:
+            credential = DefaultAzureCredential()
+            self._client = CosmosClient(url=end_pt, credential=credential)
+        else:
+            raise ValueError("Either connection_string or endpoint must be provided to CosmosService")
+
         self._database = self._client.get_database_client(database_name)
         self._container = self._database.get_container_client(container_name)
 

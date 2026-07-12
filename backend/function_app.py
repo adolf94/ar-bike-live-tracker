@@ -32,6 +32,7 @@ app = func.FunctionApp()
 # ====================================================================== #
 
 COSMOS_CONN = os.environ.get("CosmosDBConnectionString", "")
+COSMOS_ENDPOINT = os.environ.get("CosmosDBEndpoint", "")
 COSMOS_DB = os.environ.get("COSMOS_DATABASE_NAME", "AntigravityDb")
 COSMOS_CONTAINER = os.environ.get("COSMOS_CONTAINER_NAME", "Telemetry")
 
@@ -60,7 +61,12 @@ _aika_svc: AikaService | None = None
 def _get_cosmos() -> CosmosService:
     global _cosmos_svc
     if _cosmos_svc is None:
-        _cosmos_svc = CosmosService(COSMOS_CONN, COSMOS_DB, COSMOS_CONTAINER)
+        _cosmos_svc = CosmosService(
+            connection_string=COSMOS_CONN,
+            endpoint=COSMOS_ENDPOINT,
+            database_name=COSMOS_DB,
+            container_name=COSMOS_CONTAINER
+        )
     return _cosmos_svc
 
 
