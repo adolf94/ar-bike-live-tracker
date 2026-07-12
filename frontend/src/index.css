@@ -3,9 +3,9 @@
 @theme {
   --color-primary: #10b981;
   --color-primary-focus: #059669;
-  --color-dark: #0f172a;
-  --color-dark-panel: #1e293b;
-  --color-dark-border: #334155;
+  --color-dark: var(--color-dark);
+  --color-dark-panel: var(--color-dark-panel);
+  --color-dark-border: var(--color-dark-border);
   --color-danger: #ef4444;
   --color-warning: #f59e0b;
   --color-success: #10b981;
@@ -13,30 +13,50 @@
 
 @layer base {
   :root {
+    --color-dark: #0f172a;
+    --color-dark-panel: #1e293b;
+    --color-dark-border: #334155;
     color-scheme: dark;
   }
   
+  :root.light {
+    --color-dark: #f8fafc;
+    --color-dark-panel: #ffffff;
+    --color-dark-border: #cbd5e1;
+    
+    /* Text and slate theme variables override for light theme */
+    --color-slate-50: #0f172a;
+    --color-slate-100: #0f172a;
+    --color-slate-200: #1e293b;
+    --color-slate-300: #334155;
+    --color-slate-400: #64748b;
+    --color-slate-500: #64748b;
+    --color-white: #0f172a;
+    
+    color-scheme: light;
+  }
+  
   body {
-    @apply bg-dark text-slate-200 antialiased font-sans;
+    @apply bg-dark text-slate-200 antialiased font-sans transition-colors duration-200;
     margin: 0;
   }
 }
 
-/* Leaflet dark theme tweaks */
+/* Leaflet theme tweaks using CSS variables */
 .leaflet-container {
-  background-color: #0f172a !important;
+  background-color: var(--color-dark) !important;
   font-family: inherit !important;
 }
 .leaflet-control-zoom a {
-  background-color: #1e293b !important;
-  color: #cbd5e1 !important;
-  border-color: #334155 !important;
+  background-color: var(--color-dark-panel) !important;
+  color: var(--color-slate-300) !important;
+  border-color: var(--color-dark-border) !important;
 }
 .leaflet-control-zoom a:hover {
-  background-color: #334155 !important;
-  color: #fff !important;
+  background-color: var(--color-dark-border) !important;
+  color: var(--color-slate-50) !important;
 }
 .leaflet-popup-content-wrapper, .leaflet-popup-tip {
-  background-color: #1e293b !important;
-  color: #f1f5f9 !important;
+  background-color: var(--color-dark-panel) !important;
+  color: var(--color-slate-100) !important;
 }

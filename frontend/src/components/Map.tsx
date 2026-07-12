@@ -58,7 +58,7 @@ function MapResizer() {
   return null;
 }
 
-export function MapView({ location, isOnline }: { location: LocationData; isOnline: boolean }) {
+export function MapView({ location, isOnline, theme }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark' }) {
   const position: [number, number] = [location.lat || 0, location.lng || 0];
 
   return (
@@ -79,7 +79,10 @@ export function MapView({ location, isOnline }: { location: LocationData; isOnli
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={theme === 'light' 
+            ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+            : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          }
         />
         <MapResizer />
         <MapUpdater center={position} />

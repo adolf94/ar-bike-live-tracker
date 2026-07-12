@@ -4,7 +4,7 @@ import { StatusGrid } from './components/StatusGrid';
 import { EventLog } from './components/EventLog';
 import { NotificationToast } from './components/NotificationToast';
 import { useWebPubSub } from './hooks/useWebPubSub';
-import { Motorcycle, Activity, ServerCrash, Clock } from 'lucide-react';
+import { Bike, Activity, ServerCrash, Clock, Sun, Moon } from 'lucide-react';
 import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
 import api from './utils/api';
@@ -14,6 +14,18 @@ function App() {
   const { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData } = useWebPubSub();
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
+  });
+
+  useEffect(() => {
+    if (theme === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+    localStorage.setItem('theme', theme);
+  }, [theme]);
 
   // Initial fetch of history and current state
   useEffect(() => {
@@ -56,7 +68,7 @@ function App() {
       <header className="h-14 md:h-16 border-b border-dark-border bg-dark-panel flex items-center justify-between px-4 md:px-6 shrink-0 z-10 relative shadow-md">
         <div className="flex items-center gap-2 md:gap-3">
           <div className="p-1.5 md:p-2 bg-primary/20 rounded-lg text-primary">
-            <Motorcycle className="w-4 h-4 md:w-5 md:h-5" />
+            <Bike className="w-4 h-4 md:w-5 md:h-5" />
           </div>
           <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">Bike<span className="text-primary font-medium ml-1">Tracker</span></h1>
         </div>
@@ -72,6 +84,13 @@ function App() {
             {isSubscribed ? <span className="hidden md:inline">Live Connection</span> : <span className="hidden md:inline">Connecting...</span>}
             {isSubscribed ? <span className="md:hidden">Live</span> : <span className="md:hidden">Wait...</span>}
           </div>
+          <button
+            onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
+            className="p-1.5 md:p-2 rounded-xl border border-dark-border bg-dark-panel text-slate-300 hover:text-white hover:bg-dark-border cursor-pointer transition-colors shadow-sm"
+            title={theme === 'light' ? 'Switch to Dark Mode' : 'Switch to Light Mode'}
+          >
+            {theme === 'light' ? <Moon className="w-4 h-4 md:w-5 md:h-5" /> : <Sun className="w-4 h-4 md:w-5 md:h-5" />}
+          </button>
           <DeviceControls />
         </div>
       </header>
@@ -90,7 +109,7 @@ function App() {
 
         {/* Map Area */}
         <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
-          <MapView location={locationData} isOnline={statusData.isOnline} />
+          <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} />
           
           {/* Overlay Stats */}
           <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
