@@ -1,14 +1,20 @@
-import { Battery, Key, Wifi, Gauge } from "lucide-react";
+import { Compass, Key, Wifi, Gauge } from "lucide-react";
 import { cn } from "../lib/utils";
 
 interface StatusGridProps {
   speed: number;
   isIgnitionOn: boolean;
-  batteryLevel: number;
   isOnline: boolean;
+  course?: number;
 }
 
-export function StatusGrid({ speed, isIgnitionOn, batteryLevel, isOnline }: StatusGridProps) {
+const getCompassDirection = (course: number) => {
+  const directions = ["N", "NE", "E", "SE", "S", "SW", "W", "NW"];
+  const index = Math.round(((course % 360) / 45)) % 8;
+  return directions[index];
+};
+
+export function StatusGrid({ speed, isIgnitionOn, isOnline, course = 0 }: StatusGridProps) {
   return (
     <div className="grid grid-cols-4 md:grid-cols-2 gap-2 md:gap-4">
       {/* Speed */}
@@ -28,25 +34,31 @@ export function StatusGrid({ speed, isIgnitionOn, batteryLevel, isOnline }: Stat
         <span className="hidden md:block text-sm font-bold text-slate-100 mt-1">{isIgnitionOn ? "Engine ON" : "Engine OFF"}</span>
       </div>
 
-      {/* Battery */}
+      {/* Compass / Heading */}
       <div className="bg-dark-panel p-2 md:p-4 rounded-xl md:rounded-2xl border border-dark-border flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 relative overflow-hidden">
-        <div className="md:p-3 md:rounded-xl md:bg-dark md:border md:border-dark-border flex items-center justify-center">
-          <Battery className={cn("w-5 h-5", batteryLevel > 20 ? "text-success" : "text-danger")} />
+        <div className="md:p-3 md:rounded-xl md:bg-dark md:border md:border-dark-border flex items-center justify-center shrink-0">
+          <Compass 
+            className="w-5 h-5 text-primary transition-transform duration-500" 
+            style={{ transform: `rotate(${course}deg)` }}
+          />
         </div>
-        <div className="flex flex-col items-center md:items-start">
-          <div className="hidden md:block text-sm text-slate-400 font-medium">Battery</div>
-          <div className="text-xs md:text-xl font-bold text-slate-100">{batteryLevel > 0 ? `${batteryLevel}%` : "N/A"}</div>
+        <div className="flex flex-col items-center md:items-start min-w-0">
+          <div className="hidden md:block text-sm text-slate-400 font-medium">Heading</div>
+          <div className="text-xs md:text-base lg:text-lg font-bold text-slate-100 truncate w-full">
+            {course}° {getCompassDirection(course)}
+          </div>
         </div>
       </div>
 
       {/* Connectivity */}
       <div className="bg-dark-panel p-2 md:p-4 rounded-xl md:rounded-2xl border border-dark-border flex flex-col md:flex-row items-center justify-center md:justify-start gap-1 md:gap-4 relative overflow-hidden">
-        <div className="md:p-3 md:rounded-xl md:bg-dark md:border md:border-dark-border flex items-center justify-center">
+        <div className="md:p-3 md:rounded-xl md:bg-dark md:border md:border-dark-border flex items-center justify-center shrink-0">
           <Wifi className={cn("w-5 h-5", isOnline ? "text-primary" : "text-slate-500")} />
         </div>
-        <div className="flex flex-col items-center md:items-start">
+        <div className="flex flex-col items-center md:items-start min-w-0">
           <div className="hidden md:block text-sm text-slate-400 font-medium">Network</div>
-          <div className="hidden md:block text-xl font-bold text-slate-100">{isOnline ? "Online" : "Offline"}</div>
+          <div className="hidden md:block text-xl font-bold text-slate-100 truncate">{isOnline ? "Online" : "Offline"}</div>
+          <div className="md:hidden text-[10px] font-bold text-slate-400">{isOnline ? "Online" : "Offline"}</div>
         </div>
       </div>
     </div>

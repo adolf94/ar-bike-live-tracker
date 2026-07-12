@@ -8,6 +8,7 @@ import { Car, Activity, ServerCrash, Clock } from 'lucide-react';
 import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
 import api from './utils/api';
+import { PubSubDebugger } from './components/PubSubDebugger';
 
 function App() {
   const { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData } = useWebPubSub();
@@ -79,7 +80,7 @@ function App() {
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 p-2 md:p-4 gap-2 md:gap-4">
         {/* Left Sidebar / Top on Mobile */}
         <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 shrink-0 min-h-0">
-          <StatusGrid {...statusData} />
+          <StatusGrid {...statusData} course={locationData.course} />
           
           {/* Desktop Event Log */}
           <div className="hidden md:flex flex-1 min-h-0">
@@ -115,6 +116,12 @@ function App() {
           <EventLog events={events} />
         </div>
       </main>
+      <PubSubDebugger
+        latestData={latestData}
+        isSubscribed={isSubscribed}
+        setEvents={setEvents}
+        setLatestData={setLatestData}
+      />
     </div>
   );
 }

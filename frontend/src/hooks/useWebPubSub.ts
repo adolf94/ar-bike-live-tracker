@@ -73,10 +73,23 @@ export function useWebPubSub() {
           const client = new WebPubSubClient(url);
           wpsClientRef.current = client;
 
-          client.on("group-message", (e) => {
-            const doc: TelemetryDocument = e.message.data as any;
+          const handleGroupOrServerMessage = (e: any) => {
+            let doc: TelemetryDocument;
+            if (typeof e.message.data === 'string') {
+              try {
+                doc = JSON.parse(e.message.data);
+              } catch (err) {
+                console.error("Failed to parse Web PubSub message data:", err);
+                return;
+              }
+            } else {
+              doc = e.message.data as any;
+            }
             handleNewMessage(doc);
-          });
+          };
+
+          client.on("group-message", handleGroupOrServerMessage);
+          client.on("server-message", handleGroupOrServerMessage);
 
           await client.start();
           await client.joinGroup("telemetry");

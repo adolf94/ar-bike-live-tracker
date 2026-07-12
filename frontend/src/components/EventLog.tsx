@@ -69,7 +69,6 @@ export function EventLog({ events }: EventLogProps) {
 
             <div className="flex justify-between text-xs text-slate-400 pl-6">
               <span>{event.status.speed.toFixed(1)} km/h</span>
-              <span>{event.status.batteryLevel > 0 ? `${event.status.batteryLevel}% Bat` : ''}</span>
             </div>
           </div>
         ))
