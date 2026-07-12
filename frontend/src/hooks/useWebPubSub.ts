@@ -9,7 +9,7 @@ interface NegotiateResponse {
   url: string;
 }
 
-export function useWebPubSub() {
+export function useWebPubSub(getAccessToken?: () => Promise<string | null>) {
   const [latestData, setLatestData] = useState<TelemetryDocument | null>(null);
   const [latestEvent, setLatestEvent] = useState<TelemetryDocument | null>(null);
   const [events, setEvents] = useState<TelemetryDocument[]>([]);
@@ -22,6 +22,8 @@ export function useWebPubSub() {
     let isMounted = true;
 
     async function initConnection() {
+      if (!getAccessToken) return; // Do not connect if unauthenticated
+
       try {
         // 1. Fetch access token from backend using axios client
         const res = await api.get<NegotiateResponse>('/api/pubsub/negotiate');
@@ -114,7 +116,7 @@ export function useWebPubSub() {
         srConnectionRef.current.stop();
       }
     };
-  }, []);
+  }, [getAccessToken]);
 
   return { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData };
 }

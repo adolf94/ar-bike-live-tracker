@@ -70,7 +70,7 @@ export function DeviceControls() {
       closeModal();
     } catch (err: any) {
       console.error(err);
-      const message = err.response?.data?.error || err.message || 'An error occurred';
+      const message = err.response?.headers?.['x-auth-reason'] || err.response?.data?.error || err.message || 'An error occurred';
       setErrorMessage(message);
       setPin(''); // Reset PIN for retry
       setIsShaking(true);
@@ -117,8 +117,8 @@ export function DeviceControls() {
         <button
           onClick={() => setIsDropdownOpen(prev => !prev)}
           className={`flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-semibold border transition-all duration-200 cursor-pointer shadow-sm select-none ${isDropdownOpen
-              ? 'bg-primary/20 border-primary text-primary'
-              : 'bg-dark-panel hover:bg-dark-border border-dark-border text-slate-300 hover:text-white'
+            ? 'bg-primary/20 border-primary text-primary'
+            : 'bg-dark-panel hover:bg-dark-border border-dark-border text-slate-300 hover:text-white'
             }`}
         >
           <Shield className="w-4 h-4" />
@@ -209,10 +209,10 @@ export function DeviceControls() {
                   <div
                     key={i}
                     className={`w-3.5 h-3.5 rounded-full border transition-all duration-100 ${i < pin.length
-                        ? (targetCommand === 'DY'
-                          ? 'bg-danger border-danger scale-110 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
-                          : 'bg-success border-success scale-110 shadow-[0_0_8px_rgba(16,185,129,0.5)]')
-                        : 'border-slate-500 bg-transparent'
+                      ? (targetCommand === 'DY'
+                        ? 'bg-danger border-danger scale-110 shadow-[0_0_8px_rgba(239,68,68,0.5)]'
+                        : 'bg-success border-success scale-110 shadow-[0_0_8px_rgba(16,185,129,0.5)]')
+                      : 'border-slate-500 bg-transparent'
                       }`}
                   />
                 ))}
@@ -281,8 +281,8 @@ export function DeviceControls() {
       {toast && (
         <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-5 fade-in duration-300">
           <div className={`p-4 rounded-xl shadow-2xl border flex items-center gap-3 min-w-[300px] ${toast.type === 'success'
-              ? 'bg-success/10 border-success/30 text-success'
-              : 'bg-danger/10 border-danger/30 text-danger'
+            ? 'bg-success/10 border-success/30 text-success'
+            : 'bg-danger/10 border-danger/30 text-danger'
             }`}>
             {toast.type === 'success' ? (
               <Check className="w-5 h-5 shrink-0" />

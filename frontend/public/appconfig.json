@@ -1,6 +1,8 @@
 {
   "VITE_API_BASE": "http://localhost:7071",
-  "VITE_OIDC_AUTHORITY": "https://auth.example.com",
-  "VITE_OIDC_CLIENT_ID": "ar-bike-tracker-ui",
-  "VITE_OIDC_REDIRECT_URI": "http://localhost:5173"
+  "VITE_OIDC_AUTHORITY": "https://auth.adolfrey.com/api",
+  "VITE_OIDC_CLIENT_ID": "bike-tracker-web",
+  "VITE_OIDC_AUDIENCE": "bike-tracker-api",
+  "VITE_OIDC_SCOPE": "openid profile email offline_access api://bike-tracker-api/read",
+  "VITE_OIDC_REDIRECT_URI": "http://localhost:5173/"
 }

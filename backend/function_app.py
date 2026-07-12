@@ -22,6 +22,7 @@ from services.aika_service import AikaService
 from services.cosmos_service import CosmosService
 from services.event_engine import compute_event
 from services.broadcast_service import BroadcastService
+from services.auth_service import verify_token
 
 logger = logging.getLogger(__name__)
 
@@ -187,11 +188,25 @@ async def poll_telemetry(
 #  HTTP TRIGGERS — REST API for frontend consumption
 # ====================================================================== #
 
+def _check_auth(req: func.HttpRequest) -> func.HttpResponse | None:
+    try:
+        verify_token(req.headers.get("Authorization"))
+        return None
+    except ValueError as e:
+        return func.HttpResponse(
+            "",
+            status_code=401,
+            headers={"X-Auth-Reason": str(e)}
+        )
+
+
 
 @app.function_name("get_current")
 @app.route(route="telemetry/current", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
 async def get_current(req: func.HttpRequest) -> func.HttpResponse:
     """Return the latest telemetry document for the configured device."""
+    auth_err = _check_auth(req)
+    if auth_err: return auth_err
 
     try:
         cosmos = _get_cosmos()
@@ -227,6 +242,8 @@ async def get_history(req: func.HttpRequest) -> func.HttpResponse:
         - ``limit`` (int, default 50): max records to return
         - ``hours`` (int, default 24): time window in hours
     """
+    auth_err = _check_auth(req)
+    if auth_err: return auth_err
 
     try:
         limit = int(req.params.get("limit", "50"))
@@ -257,6 +274,8 @@ async def get_events(req: func.HttpRequest) -> func.HttpResponse:
     Query params:
         - ``limit`` (int, default 20): max events to return
     """
+    auth_err = _check_auth(req)
+    if auth_err: return auth_err
 
     try:
         limit = int(req.params.get("limit", "20"))
@@ -285,6 +304,8 @@ async def negotiate_pubsub(req: func.HttpRequest) -> func.HttpResponse:
 
     The frontend calls this to get a short-lived token and WebSocket URL.
     """
+    auth_err = _check_auth(req)
+    if auth_err: return auth_err
 
     if not PUBSUB_CONN:
         return func.HttpResponse(
@@ -322,6 +343,8 @@ async def negotiate_pubsub(req: func.HttpRequest) -> func.HttpResponse:
 @app.route(route="device/command", methods=["POST"], auth_level=func.AuthLevel.ANONYMOUS)
 async def send_device_command(req: func.HttpRequest) -> func.HttpResponse:
     """Send a command (DY/KY) to the tracking device, protected by a PIN."""
+    auth_err = _check_auth(req)
+    if auth_err: return auth_err
 
     try:
         req_body = req.get_json()

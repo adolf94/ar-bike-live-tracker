@@ -16,4 +16,24 @@ const api = axios.create({
   },
 });
 
+let authInterceptorId: number | null = null;
+
+export const setupAxiosAuth = (getAccessToken: () => Promise<string | null>) => {
+  if (authInterceptorId !== null) {
+    api.interceptors.request.eject(authInterceptorId);
+  }
+
+  authInterceptorId = api.interceptors.request.use(async (config) => {
+    try {
+      const token = await getAccessToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (err) {
+      console.warn('Failed to get access token for API request', err);
+    }
+    return config;
+  });
+};
+
 export default api;
