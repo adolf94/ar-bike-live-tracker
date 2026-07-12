@@ -52,7 +52,6 @@ jobs:
           name: python-app
           path: |
             backend/release.zip
-            !backend/venv
 
   deploy:
     runs-on: ubuntu-latest
@@ -83,6 +82,7 @@ jobs:
         uses: Azure/functions-action@v1
         id: deploy-to-function
         with:
+          
           app-name: 'bike-tracker-api'
           slot-name: 'Production'
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
