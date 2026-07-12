@@ -1,7 +1,13 @@
 import { useEffect, useState, useRef } from 'react';
 import { WebPubSubClient } from '@azure/web-pubsub-client';
-import { HubConnection, HubConnectionBuilder, HttpTransportType } from '@microsoft/signalr';
+import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
 import type { TelemetryDocument } from '../types';
+import api from '../utils/api';
+
+interface NegotiateResponse {
+  provider: 'signalr' | 'webpubsub';
+  url: string;
+}
 
 export function useWebPubSub() {
   const [latestData, setLatestData] = useState<TelemetryDocument | null>(null);
@@ -17,12 +23,9 @@ export function useWebPubSub() {
 
     async function initConnection() {
       try {
-        const backendBase = `http://${window.location.hostname}:7071`;
-        // 1. Fetch access token from backend
-        const res = await fetch(`${backendBase}/api/pubsub/negotiate`);
-        if (!res.ok) throw new Error('Failed to negotiate Web PubSub / SignalR');
-
-        const { provider, url } = await res.json();
+        // 1. Fetch access token from backend using axios client
+        const res = await api.get<NegotiateResponse>('/api/pubsub/negotiate');
+        const { provider, url } = res.data;
         console.log(`WebSocket Provider: ${provider}`);
 
         const handleNewMessage = (doc: TelemetryDocument) => {

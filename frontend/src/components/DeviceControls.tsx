@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Shield, Lock, Unlock, X, Check, AlertCircle, Loader2 } from 'lucide-react';
+import api from '../utils/api';
 
 export function DeviceControls() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -56,23 +57,10 @@ export function DeviceControls() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const backendBase = `http://${window.location.hostname}:7071`;
-      const res = await fetch(`${backendBase}/api/device/command`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          command,
-          pin: enteredPin,
-        }),
+      await api.post('/api/device/command', {
+        command,
+        pin: enteredPin,
       });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || 'Failed to send command');
-      }
 
       // Success
       setToast({
@@ -82,7 +70,8 @@ export function DeviceControls() {
       closeModal();
     } catch (err: any) {
       console.error(err);
-      setErrorMessage(err.message || 'An error occurred');
+      const message = err.response?.data?.error || err.message || 'An error occurred';
+      setErrorMessage(message);
       setPin(''); // Reset PIN for retry
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 400); // 400ms match with CSS shake duration

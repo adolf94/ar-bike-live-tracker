@@ -7,6 +7,7 @@ import { useWebPubSub } from './hooks/useWebPubSub';
 import { Car, Activity, ServerCrash, Clock } from 'lucide-react';
 import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
+import api from './utils/api';
 
 function App() {
   const { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData } = useWebPubSub();
@@ -16,22 +17,14 @@ function App() {
   // Initial fetch of history and current state
   useEffect(() => {
     async function loadInitialData() {
-      const backendBase = `http://${window.location.hostname}:7071`;
       try {
         const [currentRes, eventsRes] = await Promise.all([
-          fetch(`${backendBase}/api/telemetry/current`),
-          fetch(`${backendBase}/api/telemetry/events?limit=20`)
+          api.get<TelemetryDocument>('/api/telemetry/current'),
+          api.get<TelemetryDocument[]>('/api/telemetry/events', { params: { limit: 20 } })
         ]);
         
-        if (currentRes.ok) {
-          const data: TelemetryDocument = await currentRes.json();
-          setLatestData(prev => prev || data); // Only set if PubSub hasn't already fired
-        }
-        
-        if (eventsRes.ok) {
-          const history: TelemetryDocument[] = await eventsRes.json();
-          setEvents(prev => prev.length > 0 ? prev : history);
-        }
+        setLatestData(prev => prev || currentRes.data); // Only set if PubSub hasn't already fired
+        setEvents(prev => prev.length > 0 ? prev : eventsRes.data);
       } catch (error) {
         console.error("Failed to load initial data", error);
         setApiError("Cannot connect to backend API");
