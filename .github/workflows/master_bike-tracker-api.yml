@@ -5,9 +5,6 @@
 name: Build and deploy Python project to Azure Function App - bike-tracker-api
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
 
 env:
@@ -19,38 +16,19 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read #This is required for actions/checkout
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Setup Python version
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-
-      - name: Create and start virtual environment
-        run: |
-          python -m venv venv
-          source venv/bin/activate
-        working-directory: ./backend
-
-      - name: Install dependencies
-        run: pip install -r requirements.txt
-        working-directory: ./backend
-
-      # Optional: Add step to run tests here
-
+  
       - name: Zip artifact for deployment
-        run: zip release.zip ./backend/* -r
-
+        working-directory: ./backend
+        run: zip release.zip . -r -x "*.git*" # Zips everything except git history
+  
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: python-app
-          path: |
-            backend/release.zip
-            !backend/venv/
+          path: backend/release.zip
 
   deploy:
     runs-on: ubuntu-latest
@@ -83,5 +61,7 @@ jobs:
         with:
           app-name: 'bike-tracker-api'
           slot-name: 'Production'
+          remote-build: true
+          scm-do-build-during-deployment: true
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           
