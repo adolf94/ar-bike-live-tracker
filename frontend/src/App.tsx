@@ -4,7 +4,7 @@ import { StatusGrid } from './components/StatusGrid';
 import { EventLog } from './components/EventLog';
 import { NotificationToast } from './components/NotificationToast';
 import { useWebPubSub } from './hooks/useWebPubSub';
-import { Car, Activity, ServerCrash, Clock } from 'lucide-react';
+import { Motorcycle, Activity, ServerCrash, Clock } from 'lucide-react';
 import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
 import api from './utils/api';
@@ -56,9 +56,9 @@ function App() {
       <header className="h-14 md:h-16 border-b border-dark-border bg-dark-panel flex items-center justify-between px-4 md:px-6 shrink-0 z-10 relative shadow-md">
         <div className="flex items-center gap-2 md:gap-3">
           <div className="p-1.5 md:p-2 bg-primary/20 rounded-lg text-primary">
-            <Car className="w-4 h-4 md:w-5 md:h-5" />
+            <Motorcycle className="w-4 h-4 md:w-5 md:h-5" />
           </div>
-          <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">Antigravity<span className="text-primary font-medium ml-1">Tracker</span></h1>
+          <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">Bike<span className="text-primary font-medium ml-1">Tracker</span></h1>
         </div>
         
         <div className="flex items-center gap-3 md:gap-4">

@@ -31,7 +31,9 @@ export function StatusGrid({ speed, isIgnitionOn, isOnline, course = 0 }: Status
       <div className="bg-dark-panel p-2 md:p-4 rounded-xl md:rounded-2xl border border-dark-border flex flex-col items-center justify-center relative overflow-hidden group">
         <div className={cn("absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity", isIgnitionOn ? "bg-success/5" : "bg-danger/5")} />
         <Key className={cn("w-5 h-5 md:w-6 md:h-6 md:mb-2", isIgnitionOn ? "text-success" : "text-danger")} />
-        <span className="hidden md:block text-sm font-bold text-slate-100 mt-1">{isIgnitionOn ? "Engine ON" : "Engine OFF"}</span>
+        <span className="text-xs md:text-sm font-bold text-slate-100 mt-1">
+          <span className="hidden md:inline">Engine </span>{isIgnitionOn ? "ON" : "OFF"}
+        </span>
       </div>
 
       {/* Compass / Heading */}
