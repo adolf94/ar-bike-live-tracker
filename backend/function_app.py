@@ -8,6 +8,7 @@ Triggers:
     - HTTP GET: ``get_history``         — /api/telemetry/history
     - HTTP GET: ``get_events``          — /api/telemetry/events
     - HTTP GET: ``negotiate_pubsub``    — /api/pubsub/negotiate
+    - HTTP GET: ``health``              — /api/health
 """
 
 import json
@@ -357,4 +358,78 @@ async def send_device_command(req: func.HttpRequest) -> func.HttpResponse:
             status_code=500,
             mimetype="application/json",
         )
+
+
+# ====================================================================== #
+#  HTTP TRIGGER — Health Check
+# ====================================================================== #
+
+
+@app.function_name("health")
+@app.route(route="health", methods=["GET"], auth_level=func.AuthLevel.ANONYMOUS)
+async def health(req: func.HttpRequest) -> func.HttpResponse:
+    """Liveness + dependency health check.
+
+    Returns 200 when all services are reachable, 503 when any is degraded.
+
+    Response body:
+    {
+        "status": "healthy" | "degraded",
+        "services": {
+            "cosmos":    {"ok": bool, "detail": str},
+            "broadcast": {"ok": bool, "detail": str},
+            "aika":      {"ok": bool, "detail": str}
+        }
+    }
+    """
+    import datetime
+
+    services: dict[str, dict] = {}
+
+    # --- Cosmos DB ---
+    try:
+        cosmos = _get_cosmos()
+        # A lightweight call: fetch latest doc for the configured device
+        await cosmos.get_previous_state(AIKA_DEVICE)
+        services["cosmos"] = {"ok": True, "detail": "reachable"}
+    except Exception as exc:
+        services["cosmos"] = {"ok": False, "detail": str(exc)}
+
+    # --- Broadcast service (Web PubSub / SignalR) ---
+    try:
+        if not PUBSUB_CONN:
+            services["broadcast"] = {"ok": False, "detail": "not configured"}
+        else:
+            broadcast = _get_broadcast()
+            # Validate the service is initialised and has a known provider
+            provider = broadcast.provider
+            services["broadcast"] = {"ok": True, "detail": f"provider={provider}"}
+    except Exception as exc:
+        services["broadcast"] = {"ok": False, "detail": str(exc)}
+
+    # --- Aika tracker API ---
+    try:
+        if not AIKA_DEVICE or not AIKA_PASSWORD:
+            services["aika"] = {"ok": False, "detail": "credentials not configured"}
+        else:
+            aika = _get_aika()
+            await aika.fetch_current_state(save_raw_payload=False)
+            services["aika"] = {"ok": True, "detail": "reachable"}
+    except Exception as exc:
+        services["aika"] = {"ok": False, "detail": str(exc)}
+
+    all_ok = all(s["ok"] for s in services.values())
+    status_code = 200 if all_ok else 503
+
+    body = {
+        "status": "healthy" if all_ok else "degraded",
+        "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
+        "services": services,
+    }
+
+    return func.HttpResponse(
+        json.dumps(body),
+        status_code=status_code,
+        mimetype="application/json",
+    )
 
