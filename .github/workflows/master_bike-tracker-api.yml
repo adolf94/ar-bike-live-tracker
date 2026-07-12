@@ -61,6 +61,7 @@ jobs:
         with:
           app-name: 'bike-tracker-api'
           slot-name: 'Production'
+          remote-build: true
           scm-do-build-during-deployment: true
           package: ${{ env.AZURE_FUNCTIONAPP_PACKAGE_PATH }}
           
