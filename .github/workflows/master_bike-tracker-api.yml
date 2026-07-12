@@ -41,8 +41,6 @@ jobs:
 
       # Optional: Add step to run tests here
 
-      - name: Zip artifact for deployment
-        run: zip release.zip ./backend/* -r
 
       - name: Zip artifact for deployment
         working-directory: ./backend
