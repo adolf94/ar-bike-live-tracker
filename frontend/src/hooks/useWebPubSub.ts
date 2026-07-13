@@ -37,9 +37,6 @@ export function useWebPubSub(getAccessToken?: () => Promise<string | null>) {
           if (doc.eventTriggered) {
             setLatestEvent(doc);
             setEvents(prev => [doc, ...prev].slice(0, 50));
-          } else {
-            // Even if routine poll, add to history just to show activity
-            setEvents(prev => [doc, ...prev].slice(0, 50));
           }
         };
 

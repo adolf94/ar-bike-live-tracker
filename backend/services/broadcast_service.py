@@ -60,6 +60,11 @@ class BroadcastService:
                 logger.error("Web PubSub client not initialized")
                 return
             try:
+                # Avoid broadcasting if no active connections exist in the telemetry group
+                if not self._client.group_exists("telemetry"):
+                    logger.debug("No active connections in 'telemetry' group. Skipping broadcast.")
+                    return
+
                 message = json.dumps(payload)
                 self._client.send_to_all(
                     message=message,

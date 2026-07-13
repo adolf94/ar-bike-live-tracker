@@ -51,6 +51,27 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     loadInitialData();
   }, [isAuthenticated, getAccessToken, setLatestData, setEvents]);
 
+  // Fallback HTTP polling loop: runs every 20 seconds only if Web PubSub is not subscribed/connected
+  useEffect(() => {
+    if (!isAuthenticated || isSubscribed) return;
+
+    console.log("Web PubSub disconnected. Starting fallback telemetry polling (20s interval)...");
+
+    const pollInterval = setInterval(async () => {
+      try {
+        const res = await api.get<TelemetryDocument>('/api/telemetry/current');
+        setLatestData(res.data);
+      } catch (error) {
+        console.error("Fallback telemetry polling failed:", error);
+      }
+    }, 20000); // 20 seconds
+
+    return () => {
+      console.log("Clearing fallback telemetry polling interval.");
+      clearInterval(pollInterval);
+    };
+  }, [isAuthenticated, isSubscribed, setLatestData]);
+
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">

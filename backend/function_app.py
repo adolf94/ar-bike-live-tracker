@@ -86,7 +86,7 @@ def _get_aika() -> AikaService:
 
 
 # ====================================================================== #
-#  TIMER TRIGGER — Poller (every 10 seconds)
+#  TIMER TRIGGER — Poller (every 20 seconds)
 # ====================================================================== #
 
 
@@ -142,6 +142,7 @@ async def poll_telemetry(
 
         # Step 4: Build document and write to Cosmos DB
         has_changed = True
+        has_speed_or_time_update = False
         if previous_doc is not None:
             curr_loc = current_state.location.to_dict()
             curr_stat = current_state.status.to_dict()
@@ -165,17 +166,30 @@ async def poll_telemetry(
                 doc.eventTriggered or "none",
             )
         else:
+            if previous_doc is not None:
+                curr_loc = current_state.location.to_dict()
+                curr_stat = current_state.status.to_dict()
+                
+                speed_changed = curr_stat.get("speed") != previous_doc.status.get("speed")
+                position_time_changed = curr_loc.get("position_time") != previous_doc.location.get("position_time")
+                
+                if speed_changed:
+                    previous_doc.status["speed"] = curr_stat.get("speed")
+                if position_time_changed:
+                    previous_doc.location["position_time"] = curr_loc.get("position_time")
+                
+                has_speed_or_time_update = speed_changed or position_time_changed
+
             previous_doc.last_checked_at = current_state.timestamp
             cosmosout.set(json.dumps(previous_doc.to_cosmos_dict()))
             logger.info(
-                "Telemetry unchanged. Updated last_checked_at to %s on existing document id=%s",
-                current_state.timestamp,
+                "Telemetry unchanged (or only speed/time updated). Updated existing document id=%s",
                 previous_doc.id,
             )
             doc = previous_doc
 
-        # Step 5: Broadcast event (if triggered, or if telemetry changed, or if broadcasting all polls is enabled)
-        should_broadcast = (event is not None or has_changed or BROADCAST_ALL_POLLS)
+        # Step 5: Broadcast event (if triggered, or if telemetry changed, or if broadcasting all polls is enabled, or if speed/time updated)
+        should_broadcast = (event is not None or has_changed or BROADCAST_ALL_POLLS or has_speed_or_time_update)
         if should_broadcast and ENABLE_WEBPUB_BROADCAST and PUBSUB_CONN:
             broadcast = _get_broadcast()
             await broadcast.broadcast_event(doc.to_cosmos_dict())
