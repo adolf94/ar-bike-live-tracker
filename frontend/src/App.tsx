@@ -12,7 +12,7 @@ import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
 
 function App() {
-  const { user, login, logout, isAuthenticated, getAccessToken } = useAuth();
+  const { login, logout, isAuthenticated, getAccessToken } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
