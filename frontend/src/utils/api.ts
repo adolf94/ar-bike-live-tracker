@@ -16,14 +16,21 @@ const api = axios.create({
   },
 });
 
-let authInterceptorId: number | null = null;
+let requestInterceptorId: number | null = null;
+let responseInterceptorId: number | null = null;
 
-export const setupAxiosAuth = (getAccessToken: () => Promise<string | null>) => {
-  if (authInterceptorId !== null) {
-    api.interceptors.request.eject(authInterceptorId);
+export const setupAxiosAuth = (
+  getAccessToken: () => Promise<string | null>,
+  login: () => void
+) => {
+  if (requestInterceptorId !== null) {
+    api.interceptors.request.eject(requestInterceptorId);
+  }
+  if (responseInterceptorId !== null) {
+    api.interceptors.response.eject(responseInterceptorId);
   }
 
-  authInterceptorId = api.interceptors.request.use(async (config) => {
+  requestInterceptorId = api.interceptors.request.use(async (config) => {
     try {
       const token = await getAccessToken();
       if (token) {
@@ -34,6 +41,17 @@ export const setupAxiosAuth = (getAccessToken: () => Promise<string | null>) => 
     }
     return config;
   });
+
+  responseInterceptorId = api.interceptors.response.use(
+    (response) => response,
+    async (error) => {
+      if (error.response && error.response.status === 401) {
+        console.warn('Unauthorized API call (401), redirecting to login...');
+        login();
+      }
+      return Promise.reject(error);
+    }
+  );
 };
 
 export default api;

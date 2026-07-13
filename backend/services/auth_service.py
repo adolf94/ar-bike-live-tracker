@@ -10,6 +10,7 @@ AUTHORITY = os.environ.get("OIDC_AUTHORITY", "https://auth.adolfrey.com/api")
 CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
 AUDIENCE = os.environ.get("OIDC_AUDIENCE", CLIENT_ID)
 JWKS_URI = f"{AUTHORITY}/.well-known/jwks.json"
+REQUIRED_SCOPE = os.environ.get("OIDC_REQUIRED_SCOPE", "api://bike-tracker-api/user")
 
 # PyJWKClient handles fetching and caching the keys automatically
 jwks_client = PyJWKClient(JWKS_URI)
@@ -46,6 +47,19 @@ def verify_token(auth_header: str | None) -> dict:
             decode_kwargs["audience"] = AUDIENCE
 
         payload = jwt.decode(token, signing_key.key, **decode_kwargs)
+
+        # Verify the required scope is present
+        scopes = payload.get("scp", payload.get("scope", ""))
+        if isinstance(scopes, str):
+            scopes_list = scopes.split()
+        elif isinstance(scopes, list):
+            scopes_list = scopes
+        else:
+            scopes_list = []
+            
+        if REQUIRED_SCOPE and REQUIRED_SCOPE not in scopes_list:
+            raise ValueError(f"Token is missing the required scope '{REQUIRED_SCOPE}'")
+
         return payload
     except jwt.ExpiredSignatureError:
         raise ValueError("Token has expired")

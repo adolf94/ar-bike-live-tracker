@@ -132,10 +132,8 @@ export function PubSubDebugger({ latestData, isSubscribed, setEvents, setLatestD
                     <option value="">(None / Heartbeat)</option>
                     <option value="movement_started">Movement Started</option>
                     <option value="movement_stopped">Movement Stopped</option>
-                    <option value="overspeed_alert">Overspeed Alert</option>
-                    <option value="sos_alert">SOS Alert</option>
-                    <option value="ignition_on">Ignition On</option>
-                    <option value="ignition_off">Ignition Off</option>
+                    <option value="unauthorized_movement">Unauthorized Movement</option>
+                    <option value="engine_off">Engine Off</option>
                   </select>
                 </div>
                 <div className="flex flex-col gap-1">

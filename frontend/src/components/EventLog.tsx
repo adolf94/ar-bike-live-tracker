@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, AlertTriangle, Play, Square, Activity, Maximize2, X } from "lucide-react";
+import { Clock, AlertTriangle, Play, Square, Activity, Maximize2, X, PowerOff } from "lucide-react";
 import type { TelemetryDocument } from "../types";
 
 interface EventLogProps {
@@ -17,6 +17,8 @@ export function EventLog({ events }: EventLogProps) {
         return <Square className="w-4 h-4 text-slate-400" />;
       case "unauthorized_movement":
         return <AlertTriangle className="w-4 h-4 text-danger" />;
+      case "engine_off":
+        return <PowerOff className="w-4 h-4 text-slate-500" />;
       default:
         return <Activity className="w-4 h-4 text-primary" />;
     }
@@ -30,6 +32,8 @@ export function EventLog({ events }: EventLogProps) {
         return "Movement Stopped";
       case "unauthorized_movement":
         return "Unauthorized Movement";
+      case "engine_off":
+        return "Engine Off";
       default:
         return "Routine Update";
     }
@@ -52,6 +56,9 @@ export function EventLog({ events }: EventLogProps) {
             )}
             {event.eventTriggered === "movement_started" && (
               <div className="absolute top-0 left-0 w-1 h-full bg-warning"></div>
+            )}
+            {event.eventTriggered === "engine_off" && (
+              <div className="absolute top-0 left-0 w-1 h-full bg-slate-500"></div>
             )}
 
             <div className="flex items-center justify-between">

@@ -34,7 +34,9 @@ export function NotificationToast({ latestEvent }: NotificationToastProps) {
           <h4 className={`font-semibold ${isDanger ? 'text-danger' : 'text-slate-100'}`}>
             {latestEvent.eventTriggered === 'unauthorized_movement' ? 'UNAUTHORIZED MOVEMENT!' :
               latestEvent.eventTriggered === 'movement_started' ? 'Movement Started' :
-                'Movement Stopped'}
+                latestEvent.eventTriggered === 'engine_off' ? 'Engine Off' :
+                  latestEvent.eventTriggered === 'movement_stopped' ? 'Movement Stopped' :
+                    'Routine Update'}
           </h4>
           <p className="text-sm mt-1 opacity-90">
             Speed: {latestEvent.status.speed.toFixed(1)} km/h<br />

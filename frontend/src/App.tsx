@@ -11,31 +11,19 @@ import api, { setupAxiosAuth } from './utils/api';
 import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
 
-function App() {
+function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'light' | 'dark' | ((prev: 'light' | 'dark') => 'light' | 'dark')) => void }) {
   const { login, logout, isAuthenticated, getAccessToken } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
-      setupAxiosAuth(getAccessToken);
+      setupAxiosAuth(getAccessToken, login);
     }
-  }, [isAuthenticated, getAccessToken]);
+  }, [isAuthenticated, getAccessToken, login]);
 
   // Only initialize subscriptions if authenticated
   const { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData } = useWebPubSub(isAuthenticated ? getAccessToken : undefined);
   const [isLoading, setIsLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    return (localStorage.getItem('theme') as 'light' | 'dark') || 'dark';
-  });
-
-  useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.classList.add('light');
-    } else {
-      document.documentElement.classList.remove('light');
-    }
-    localStorage.setItem('theme', theme);
-  }, [theme]);
 
   // Initial fetch of history and current state
   useEffect(() => {
