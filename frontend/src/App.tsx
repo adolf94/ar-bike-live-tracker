@@ -12,7 +12,7 @@ import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
 
 function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'light' | 'dark' | ((prev: 'light' | 'dark') => 'light' | 'dark')) => void }) {
-  const { login, logout, isAuthenticated, getAccessToken } = useAuth();
+  const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -22,7 +22,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
 
   // Only initialize subscriptions if authenticated
   const { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData } = useWebPubSub(isAuthenticated ? getAccessToken : undefined);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isDataLoading, setIsDataLoading] = useState(true);
   const [apiError, setApiError] = useState<string | null>(null);
 
   // Initial fetch of history and current state
@@ -31,7 +31,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
       if (!isAuthenticated) return;
 
       try {
-        setIsLoading(true);
+        setIsDataLoading(true);
 
         const [currentRes, eventsRes] = await Promise.all([
           api.get<TelemetryDocument>('/api/telemetry/current'),
@@ -44,12 +44,20 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
         console.error("Failed to load initial data", error);
         setApiError("Cannot connect to backend API");
       } finally {
-        setIsLoading(false);
+        setIsDataLoading(false);
       }
     }
 
     loadInitialData();
   }, [isAuthenticated, getAccessToken, setLatestData, setEvents]);
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-dark flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-dark-border border-t-primary animate-spin"></div>
+      </div>
+    );
+  }
 
   if (!isAuthenticated) {
     return (
@@ -72,7 +80,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     );
   }
 
-  if (isLoading) {
+  if (isDataLoading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
         <div className="w-12 h-12 rounded-full border-4 border-dark-border border-t-primary animate-spin"></div>
