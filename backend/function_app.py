@@ -368,7 +368,7 @@ async def send_device_command(req: func.HttpRequest) -> func.HttpResponse:
     if not pin or str(pin) != str(COMMAND_PIN):
         return func.HttpResponse(
             json.dumps({"error": "Invalid PIN"}),
-            status_code=401,
+            status_code=403,
             mimetype="application/json",
         )
 
