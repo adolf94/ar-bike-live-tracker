@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Terminal, Bug, Play, Copy, Check, Trash2, Wifi, WifiOff } from 'lucide-react';
 import type { TelemetryDocument } from '../types';
+import { formatDisplayDate } from '../utils/date';
 
 interface PubSubDebuggerProps {
   latestData: TelemetryDocument | null;
@@ -25,7 +26,7 @@ export function PubSubDebugger({ latestData, isSubscribed, setEvents, setLatestD
   useEffect(() => {
     if (latestData) {
       setLogs(prev => [
-        { time: new Date().toLocaleTimeString(), data: latestData },
+        { time: formatDisplayDate(new Date().toISOString()), data: latestData },
         ...prev
       ].slice(0, 10)); // Keep last 10
     }
@@ -67,7 +68,7 @@ export function PubSubDebugger({ latestData, isSubscribed, setEvents, setLatestD
 
     // Also add to logs list directly
     setLogs(prev => [
-      { time: `[Simulated] ${new Date().toLocaleTimeString()}`, data: mockDoc },
+      { time: `[Simulated] ${formatDisplayDate(new Date().toISOString())}`, data: mockDoc },
       ...prev
     ].slice(0, 10));
   };

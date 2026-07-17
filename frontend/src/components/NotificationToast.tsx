@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, X } from 'lucide-react';
 import type { TelemetryDocument } from '../types';
+import { formatDisplayDate } from '../utils/date';
 
 interface NotificationToastProps {
   latestEvent: TelemetryDocument | null;
@@ -45,7 +46,7 @@ export function NotificationToast({ latestEvent }: NotificationToastProps) {
           </h4>
           <p className="text-sm mt-1 opacity-90">
             Speed: {latestEvent.status.speed.toFixed(1)} km/h<br />
-            Time: {new Date(latestEvent.status_updated_at).toLocaleTimeString()}
+            Time: {formatDisplayDate(latestEvent.status_updated_at)}
           </p>
         </div>
 

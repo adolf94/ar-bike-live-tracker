@@ -8,6 +8,7 @@ import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut } from 'lu
 import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
 import api, { setupAxiosAuth } from './utils/api';
+import { formatDisplayDate } from './utils/date';
 import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
 
@@ -176,14 +177,14 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
               <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
               <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
                 <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                {latestData?.last_checked_at ? new Date(latestData.last_checked_at).toLocaleTimeString() : 'Never'}
+                {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
               </div>
             </div>
             <div className="border-t border-dark-border/50 pt-1">
               <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
               <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
                 <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
-                {latestData?.status_updated_at ? new Date(latestData.status_updated_at).toLocaleTimeString() : 'Never'}
+                {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
               </div>
             </div>
           </div>

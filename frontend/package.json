@@ -17,6 +17,8 @@
     "@types/leaflet": "^1.9.21",
     "axios": "^1.18.1",
     "clsx": "^2.1.1",
+    "date-fns": "^4.4.0",
+    "dayjs": "^1.11.21",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.24.0",
     "react": "^19.2.7",

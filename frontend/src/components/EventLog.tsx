@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Clock, AlertTriangle, Play, Square, Activity, Maximize2, X, PowerOff, WifiOff, Wifi } from "lucide-react";
 import type { TelemetryDocument } from "../types";
+import { formatEventTime } from "../utils/date";
 
 interface EventLogProps {
   events: TelemetryDocument[];
@@ -84,7 +85,7 @@ export function EventLog({ events }: EventLogProps) {
               </div>
               <div className="flex items-center gap-1 text-xs text-slate-500">
                 <Clock className="w-3 h-3" />
-                {new Date(event.status_updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                {formatEventTime(event.status_updated_at)}
               </div>
             </div>
 
