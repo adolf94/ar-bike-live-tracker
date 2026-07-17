@@ -1,10 +1,11 @@
 """Protocol for reading/querying persisted telemetry state."""
 
-from typing import List, Optional, Protocol
+from typing import List, Optional, Protocol, runtime_checkable
 
 from models.documents import TelemetryDocument
 
 
+@runtime_checkable
 class IStateStore(Protocol):
     """Abstraction over the state persistence layer (Cosmos DB)."""
 

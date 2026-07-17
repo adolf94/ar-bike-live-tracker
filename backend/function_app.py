@@ -14,6 +14,7 @@ Triggers:
 import json
 import logging
 import os
+from datetime import datetime, timezone, timedelta
 
 import azure.functions as func
 
@@ -23,6 +24,7 @@ from services.cosmos_service import CosmosService
 from services.event_engine import compute_event
 from services.broadcast_service import BroadcastService
 from services.auth_service import verify_token
+from services.memory_cache_service import MemoryCacheService
 
 logger = logging.getLogger(__name__)
 
@@ -57,6 +59,7 @@ COMMAND_PIN = os.environ.get("COMMAND_PIN", "1234")
 _cosmos_svc: CosmosService | None = None
 _broadcast_svc: BroadcastService | None = None
 _aika_svc: AikaService | None = None
+_cache_svc: MemoryCacheService | None = None
 
 
 def _get_cosmos() -> CosmosService:
@@ -83,6 +86,13 @@ def _get_aika() -> AikaService:
     if _aika_svc is None:
         _aika_svc = AikaService(AIKA_SERVER, AIKA_DEVICE, AIKA_PASSWORD)
     return _aika_svc
+
+
+def _get_cache() -> MemoryCacheService:
+    global _cache_svc
+    if _cache_svc is None:
+        _cache_svc = MemoryCacheService(_get_cosmos())
+    return _cache_svc
 
 
 # ====================================================================== #
@@ -140,9 +150,13 @@ async def poll_telemetry(
         # Step 3: Compute event
         event = compute_event(current_state, previous_doc, ENABLE_SECURITY)
 
-        # Step 4: Build document and write to Cosmos DB
+        # Step 4: Determine if we need to save and update cache
         has_changed = True
         has_speed_or_time_update = False
+        should_save_to_cosmos = False
+        doc_to_save = None
+        final_doc = None
+        
         if previous_doc is not None:
             curr_loc = current_state.location.to_dict()
             curr_stat = current_state.status.to_dict()
@@ -156,16 +170,31 @@ async def poll_telemetry(
                 for k in ["isIgnitionOn", "batteryLevel", "isOnline"]
             )
             has_changed = location_changed or status_changed or (event is not None)
-
+        
+        # Determine if we need to update last_checked_at due to 20-minute threshold
+        should_update_last_checked = False
+        if previous_doc is not None and previous_doc.last_checked_at:
+            try:
+                last_checked = datetime.fromisoformat(previous_doc.last_checked_at.replace('Z', '+00:00'))
+                time_since_last_check = datetime.now(timezone.utc) - last_checked
+                should_update_last_checked = time_since_last_check >= timedelta(minutes=20)
+            except (ValueError, AttributeError):
+                # If parsing fails, update anyway
+                should_update_last_checked = True
+        
         if has_changed:
+            # Create new document for significant changes
             doc = TelemetryDocument.from_state(current_state, event)
-            cosmosout.set(json.dumps(doc.to_cosmos_dict()))
+            doc_to_save = doc
+            final_doc = doc
+            should_save_to_cosmos = True
             logger.info(
                 "Persisted new document id=%s, event=%s",
                 doc.id,
                 doc.eventTriggered or "none",
             )
         else:
+            # No significant changes - handle speed/time updates and 20-minute check
             if previous_doc is not None:
                 curr_loc = current_state.location.to_dict()
                 curr_stat = current_state.status.to_dict()
@@ -179,20 +208,49 @@ async def poll_telemetry(
                     previous_doc.location["position_time"] = curr_loc.get("position_time")
                 
                 has_speed_or_time_update = speed_changed or position_time_changed
-
-            previous_doc.last_checked_at = current_state.timestamp
-            cosmosout.set(json.dumps(previous_doc.to_cosmos_dict()))
-            logger.info(
-                "Telemetry unchanged (or only speed/time updated). Updated existing document id=%s",
-                previous_doc.id,
-            )
-            doc = previous_doc
-
-        # Step 5: Broadcast event (if triggered, or if telemetry changed, or if broadcasting all polls is enabled, or if speed/time updated)
+            
+            # Update last_checked_at
+            if previous_doc is not None:
+                previous_doc.last_checked_at = current_state.timestamp
+                final_doc = previous_doc
+                
+                # Save to CosmosDB if speed/time updated OR 20-minute threshold reached
+                if has_speed_or_time_update or should_update_last_checked:
+                    doc_to_save = final_doc
+                    should_save_to_cosmos = True
+                    logger.info(
+                        "Updating existing document id=%s (speed/time update or 20-min threshold)",
+                        final_doc.id,
+                    )
+                else:
+                    logger.info(
+                        "Telemetry unchanged, caching only (no CosmosDB write)",
+                    )
+            else:
+                # First poll - no previous document, create new one
+                doc = TelemetryDocument.from_state(current_state, event)
+                doc_to_save = doc
+                final_doc = doc
+                should_save_to_cosmos = True
+                logger.info(
+                    "First poll, creating initial document id=%s",
+                    doc.id,
+                )
+        
+        # Step 5: Save to CosmosDB if needed
+        if should_save_to_cosmos and doc_to_save is not None:
+            cosmosout.set(json.dumps(doc_to_save.to_cosmos_dict()))
+        
+        # Step 6: Update cache with latest document (whether saved or not)
+        if final_doc is not None:
+            cache = _get_cache()
+            await cache.set_latest(final_doc)
+        
+        # Step 7: Broadcast event
         should_broadcast = (event is not None or has_changed or BROADCAST_ALL_POLLS or has_speed_or_time_update)
         if should_broadcast and ENABLE_WEBPUB_BROADCAST and PUBSUB_CONN:
             broadcast = _get_broadcast()
-            await broadcast.broadcast_event(doc.to_cosmos_dict())
+            await broadcast.broadcast_event(final_doc.to_cosmos_dict())
 
     except Exception:
         logger.exception("Error in poll_telemetry")
@@ -223,8 +281,9 @@ async def get_current(req: func.HttpRequest) -> func.HttpResponse:
     if auth_err: return auth_err
 
     try:
-        cosmos = _get_cosmos()
-        doc = await cosmos.get_previous_state(AIKA_DEVICE)
+        # Use cache-first approach
+        cache = _get_cache()
+        doc = await cache.get_previous_state(AIKA_DEVICE)
 
         if doc is None:
             return func.HttpResponse(
@@ -421,7 +480,8 @@ async def health(req: func.HttpRequest) -> func.HttpResponse:
         "services": {
             "cosmos":    {"ok": bool, "detail": str},
             "broadcast": {"ok": bool, "detail": str},
-            "aika":      {"ok": bool, "detail": str}
+            "aika":      {"ok": bool, "detail": str},
+            "cache":     {"ok": bool, "detail": str, "has_data": bool}
         }
     }
     """
@@ -460,6 +520,20 @@ async def health(req: func.HttpRequest) -> func.HttpResponse:
             services["aika"] = {"ok": True, "detail": "reachable"}
     except Exception as exc:
         services["aika"] = {"ok": False, "detail": str(exc)}
+    
+    # --- Cache service ---
+    try:
+        cache = _get_cache()
+        cache_status = cache.get_cache_status()
+        services["cache"] = {
+            "ok": True, 
+            "detail": "initialized",
+            "has_data": cache_status["has_data"],
+            "device_id": cache_status["device_id"],
+            "timestamp": cache_status["timestamp"]
+        }
+    except Exception as exc:
+        services["cache"] = {"ok": False, "detail": str(exc), "has_data": False}
 
     all_ok = all(s["ok"] for s in services.values())
     status_code = 200 if all_ok else 503
