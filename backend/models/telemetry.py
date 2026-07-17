@@ -12,6 +12,8 @@ class EventType(str, Enum):
     MOVEMENT_STOPPED = "movement_stopped"
     UNAUTHORIZED_MOVEMENT = "unauthorized_movement"
     ENGINE_OFF = "engine_off"
+    CONN_LOST = "conn_lost"
+    CONN_RESTORE = "conn_restore"
 
 
 @dataclass(frozen=True)

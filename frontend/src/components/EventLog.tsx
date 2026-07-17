@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock, AlertTriangle, Play, Square, Activity, Maximize2, X, PowerOff } from "lucide-react";
+import { Clock, AlertTriangle, Play, Square, Activity, Maximize2, X, PowerOff, WifiOff, Wifi } from "lucide-react";
 import type { TelemetryDocument } from "../types";
 
 interface EventLogProps {
@@ -17,6 +17,10 @@ export function EventLog({ events }: EventLogProps) {
         return <Square className="w-4 h-4 text-slate-400" />;
       case "unauthorized_movement":
         return <AlertTriangle className="w-4 h-4 text-danger" />;
+      case "conn_lost":
+        return <WifiOff className="w-4 h-4 text-danger" />;
+      case "conn_restore":
+        return <Wifi className="w-4 h-4 text-success" />;
       case "engine_off":
         return <PowerOff className="w-4 h-4 text-slate-500" />;
       default:
@@ -32,6 +36,10 @@ export function EventLog({ events }: EventLogProps) {
         return "Movement Stopped";
       case "unauthorized_movement":
         return "Unauthorized Movement";
+      case "conn_lost":
+        return "Connection Lost";
+      case "conn_restore":
+        return "Connection Restored";
       case "engine_off":
         return "Engine Off";
       default:
@@ -56,6 +64,12 @@ export function EventLog({ events }: EventLogProps) {
             )}
             {event.eventTriggered === "movement_started" && (
               <div className="absolute top-0 left-0 w-1 h-full bg-warning"></div>
+            )}
+            {event.eventTriggered === "conn_lost" && (
+              <div className="absolute top-0 left-0 w-1 h-full bg-danger"></div>
+            )}
+            {event.eventTriggered === "conn_restore" && (
+              <div className="absolute top-0 left-0 w-1 h-full bg-success"></div>
             )}
             {event.eventTriggered === "engine_off" && (
               <div className="absolute top-0 left-0 w-1 h-full bg-slate-500"></div>

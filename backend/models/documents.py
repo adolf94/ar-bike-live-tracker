@@ -111,3 +111,7 @@ class TelemetryDocument:
     @property
     def is_ignition_on(self) -> bool:
         return bool(self.status.get("isIgnitionOn", False))
+
+    @property
+    def is_online(self) -> bool:
+        return bool(self.status.get("isOnline", True))

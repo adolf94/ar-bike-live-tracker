@@ -27,8 +27,10 @@ def compute_event(
 
     Priority order (first match wins):
         1. ``unauthorized_movement`` (if flag enabled)
-        2. ``movement_started``
-        3. ``movement_stopped``
+        2. ``conn_lost``
+        3. ``conn_restore``
+        4. ``movement_started``
+        5. ``movement_stopped``
 
     Args:
         current: The freshly-polled telemetry snapshot.
@@ -43,6 +45,7 @@ def compute_event(
 
     cur_speed = current.status.speed
     cur_ignition = current.status.is_ignition_on
+    cur_online = current.status.is_online
 
     # First poll ever — no previous state to compare against
     if previous is None:
@@ -51,6 +54,7 @@ def compute_event(
 
     prev_speed = previous.speed
     prev_ignition = previous.is_ignition_on
+    prev_online = previous.is_online
 
     # ------------------------------------------------------------------ #
     #  4.3 — Security Alert (optional, highest priority)
@@ -62,6 +66,20 @@ def compute_event(
                 cur_speed,
             )
             return EventType.UNAUTHORIZED_MOVEMENT
+
+    # ------------------------------------------------------------------ #
+    #  Connection Lost
+    # ------------------------------------------------------------------ #
+    if not cur_online and prev_online:
+        logger.warning("CONN LOST — device went offline")
+        return EventType.CONN_LOST
+
+    # ------------------------------------------------------------------ #
+    #  Connection Restored
+    # ------------------------------------------------------------------ #
+    if cur_online and not prev_online:
+        logger.info("CONN RESTORE — device came back online")
+        return EventType.CONN_RESTORE
 
     # ------------------------------------------------------------------ #
     #  4.1 — Movement Started

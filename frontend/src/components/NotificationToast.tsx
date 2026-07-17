@@ -19,24 +19,29 @@ export function NotificationToast({ latestEvent }: NotificationToastProps) {
 
   if (!isVisible || !latestEvent) return null;
 
-  const isDanger = latestEvent.eventTriggered === "unauthorized_movement";
+  const isDanger = latestEvent.eventTriggered === "unauthorized_movement" || latestEvent.eventTriggered === "conn_lost";
+  const isSuccess = latestEvent.eventTriggered === "conn_restore";
 
   return (
     <div className="fixed top-6 right-6 z-50 animate-in slide-in-from-top-5 fade-in duration-300">
       <div className={`p-4 rounded-xl shadow-2xl border flex items-start gap-4 min-w-[320px] 
         ${isDanger
           ? 'bg-danger/10 border-danger/50 text-danger-foreground'
-          : 'bg-dark-panel border-dark-border text-slate-200'}`}>
+          : isSuccess
+            ? 'bg-success/10 border-success/50 text-success-foreground'
+            : 'bg-dark-panel border-dark-border text-slate-200'}`}>
 
-        <AlertCircle className={`w-6 h-6 shrink-0 mt-0.5 ${isDanger ? 'text-danger animate-pulse' : 'text-warning'}`} />
+        <AlertCircle className={`w-6 h-6 shrink-0 mt-0.5 ${isDanger ? 'text-danger animate-pulse' : isSuccess ? 'text-success' : 'text-warning'}`} />
 
         <div className="flex-1">
-          <h4 className={`font-semibold ${isDanger ? 'text-danger' : 'text-slate-100'}`}>
+          <h4 className={`font-semibold ${isDanger ? 'text-danger' : isSuccess ? 'text-success' : 'text-slate-100'}`}>
             {latestEvent.eventTriggered === 'unauthorized_movement' ? 'UNAUTHORIZED MOVEMENT!' :
-              latestEvent.eventTriggered === 'movement_started' ? 'Movement Started' :
-                latestEvent.eventTriggered === 'engine_off' ? 'Engine Off' :
-                  latestEvent.eventTriggered === 'movement_stopped' ? 'Movement Stopped' :
-                    'Routine Update'}
+              latestEvent.eventTriggered === 'conn_lost' ? 'Connection Lost' :
+                latestEvent.eventTriggered === 'conn_restore' ? 'Connection Restored' :
+                  latestEvent.eventTriggered === 'movement_started' ? 'Movement Started' :
+                    latestEvent.eventTriggered === 'engine_off' ? 'Engine Off' :
+                      latestEvent.eventTriggered === 'movement_stopped' ? 'Movement Stopped' :
+                        'Routine Update'}
           </h4>
           <p className="text-sm mt-1 opacity-90">
             Speed: {latestEvent.status.speed.toFixed(1)} km/h<br />

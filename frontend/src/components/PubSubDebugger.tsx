@@ -55,7 +55,7 @@ export function PubSubDebugger({ latestData, isSubscribed, setEvents, setLatestD
         speed: simSpeed,
         isIgnitionOn: simIgnition,
         batteryLevel: 92,
-        isOnline: true,
+        isOnline: simEvent !== 'conn_lost',
       },
       eventTriggered: simEvent || null,
       ttl: 5184000,
@@ -133,6 +133,8 @@ export function PubSubDebugger({ latestData, isSubscribed, setEvents, setLatestD
                     <option value="movement_started">Movement Started</option>
                     <option value="movement_stopped">Movement Stopped</option>
                     <option value="unauthorized_movement">Unauthorized Movement</option>
+                    <option value="conn_lost">Connection Lost</option>
+                    <option value="conn_restore">Connection Restored</option>
                     <option value="engine_off">Engine Off</option>
                   </select>
                 </div>

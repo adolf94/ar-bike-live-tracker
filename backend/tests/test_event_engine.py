@@ -25,6 +25,7 @@ def _make_state(
     ignition: bool = False,
     lat: float = 14.5794,
     lng: float = 121.0594,
+    is_online: bool = True,
 ) -> TelemetryState:
     """Build a ``TelemetryState`` with sensible defaults."""
     return TelemetryState(
@@ -35,13 +36,13 @@ def _make_state(
             speed=speed,
             is_ignition_on=ignition,
             battery_level=95,
-            is_online=True,
+            is_online=is_online,
         ),
     )
 
 
 def _make_previous(
-    speed: float = 0.0, ignition: bool = False
+    speed: float = 0.0, ignition: bool = False, is_online: bool = True
 ) -> TelemetryDocument:
     """Build a ``TelemetryDocument`` representing the previous state."""
     return TelemetryDocument(
@@ -53,7 +54,7 @@ def _make_previous(
             "speed": speed,
             "isIgnitionOn": ignition,
             "batteryLevel": 95,
-            "isOnline": True,
+            "isOnline": is_online,
         },
         eventTriggered=None,
     )
@@ -184,6 +185,68 @@ class TestUnauthorizedMovement:
         previous = _make_previous(speed=3.0, ignition=False)
         result = compute_event(current, previous, enable_security_alert=True)
         assert result == EventType.UNAUTHORIZED_MOVEMENT
+
+
+# ====================================================================== #
+#  Test: Connection Lost
+# ====================================================================== #
+
+
+class TestConnLost:
+    def test_conn_lost_detected(self):
+        """Device transitions from online → offline."""
+        current = _make_state(is_online=False)
+        previous = _make_previous(is_online=True)
+        result = compute_event(current, previous)
+        assert result == EventType.CONN_LOST
+
+    def test_no_conn_lost_when_already_offline(self):
+        """Device remains offline — no event."""
+        current = _make_state(is_online=False)
+        previous = _make_previous(is_online=False)
+        result = compute_event(current, previous)
+        assert result is None
+
+    def test_no_conn_lost_when_online(self):
+        """Device stays online — no event."""
+        current = _make_state(is_online=True)
+        previous = _make_previous(is_online=True)
+        result = compute_event(current, previous)
+        assert result is None
+
+    def test_conn_lost_with_stale_previous_document(self):
+        """Previous document does not have isOnline field in status (defaults to True)."""
+        current = _make_state(is_online=False)
+        previous = TelemetryDocument(
+            id="prev-old",
+            deviceId="test-device",
+            status_updated_at="2026-07-11T11:59:50Z",
+            location={"lat": 14.5794, "lng": 121.0594},
+            status={"speed": 0, "isIgnitionOn": False},
+        )
+        result = compute_event(current, previous)
+        assert result == EventType.CONN_LOST
+
+
+# ====================================================================== #
+#  Test: Connection Restored
+# ====================================================================== #
+
+
+class TestConnRestore:
+    def test_conn_restore_detected(self):
+        """Device transitions from offline → online."""
+        current = _make_state(is_online=True)
+        previous = _make_previous(is_online=False)
+        result = compute_event(current, previous)
+        assert result == EventType.CONN_RESTORE
+
+    def test_no_conn_restore_when_already_online(self):
+        """Device remains online — no event."""
+        current = _make_state(is_online=True)
+        previous = _make_previous(is_online=True)
+        result = compute_event(current, previous)
+        assert result is None
 
 
 # ====================================================================== #
