@@ -64,15 +64,18 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   };
 
   const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
+  const [showTempPin, setShowTempPin] = useState(false);
 
   const handleFlyToLatest = () => {
     if (latestData?.location) {
       setFlyToLocation(latestData.location);
+      setShowTempPin(false); // Don't show temp pin for overlay stats
     }
   };
 
   const handleSelectEvent = (location: LocationData) => {
     setFlyToLocation(location);
+    setShowTempPin(true); // Show temp pin for event log clicks
   };
 
   // Show loading state only while auth is loading
@@ -204,7 +207,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
           <MapViewSkeleton />
         ) : (
           <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
-            <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} targetLocation={flyToLocation} />
+            <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} targetLocation={flyToLocation} showTempPin={showTempPin} />
 
             {/* Overlay Stats */}
             <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">

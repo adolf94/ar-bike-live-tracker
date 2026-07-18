@@ -96,15 +96,17 @@ function FlyToMapUpdater({ target, onFlyComplete }: { target: LocationData | nul
   return null;
 }
 
-export function MapView({ location, isOnline, theme, targetLocation }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark'; targetLocation?: LocationData | null }) {
+export function MapView({ location, isOnline, theme, targetLocation, showTempPin }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark'; targetLocation?: LocationData | null; showTempPin?: boolean }) {
   const position: [number, number] = [location.lat || 0, location.lng || 0];
   const [tempPin, setTempPin] = useState<LocationData | null>(null);
   
   const handleFlyComplete = () => {
-    setTempPin(targetLocation ?? null);
-    setTimeout(() => {
+    // Only set temp pin if showTempPin is true AND targetLocation exists
+    if (showTempPin && targetLocation) {
+      setTempPin(targetLocation);
+    } else {
       setTempPin(null);
-    }, 3000);
+    }
   };
 
   return (
