@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { MapView } from './components/Map';
 import { StatusGrid } from './components/StatusGrid';
 import { StatusGridSkeleton } from './components/StatusGridSkeleton';
@@ -14,6 +14,7 @@ import { setupAxiosAuth } from './utils/api';
 import { formatDisplayDate } from './utils/date';
 import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
+import type { LocationData } from './types';
 
 function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'light' | 'dark' | ((prev: 'light' | 'dark') => 'light' | 'dark')) => void }) {
   const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading } = useAuth();
@@ -60,6 +61,12 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   // Manual refresh function
   const handleManualRefresh = () => {
     refreshAll();
+  };
+
+  const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
+
+  const handleSelectEvent = (location: LocationData) => {
+    setFlyToLocation(location);
   };
 
   // Show loading state only while auth is loading
@@ -181,7 +188,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
             {showEventLogSkeleton ? (
               <EventLogSkeleton />
             ) : (
-              <EventLog events={events} />
+              <EventLog events={events} onSelectEvent={handleSelectEvent} />
             )}
           </div>
         </div>
@@ -191,7 +198,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
           <MapViewSkeleton />
         ) : (
           <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
-            <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} />
+            <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} targetLocation={flyToLocation} />
 
             {/* Overlay Stats */}
             <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
@@ -218,7 +225,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
           {showEventLogSkeleton ? (
             <EventLogSkeleton />
           ) : (
-            <EventLog events={events} />
+            <EventLog events={events} onSelectEvent={handleSelectEvent} />
           )}
         </div>
       </main>

@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Clock, AlertTriangle, Play, Square, Activity, Maximize2, X, PowerOff, WifiOff, Wifi } from "lucide-react";
-import type { TelemetryDocument } from "../types";
+import type { TelemetryDocument, LocationData } from "../types";
 import { formatEventTime } from "../utils/date";
 
 interface EventLogProps {
   events: TelemetryDocument[];
+  onSelectEvent?: (location: LocationData) => void;
 }
 
-export function EventLog({ events }: EventLogProps) {
+export function EventLog({ events, onSelectEvent }: EventLogProps) {
   const [isMobileModalOpen, setIsMobileModalOpen] = useState(false);
 
   const getEventIcon = (type: string | null) => {
@@ -58,7 +59,8 @@ export function EventLog({ events }: EventLogProps) {
         events.map((event) => (
           <div
             key={event.id}
-            className="bg-dark p-3 rounded-xl border border-dark-border/50 flex flex-col gap-2 relative overflow-hidden shrink-0"
+            onClick={() => onSelectEvent?.(event.location)}
+            className="bg-dark p-3 rounded-xl border border-dark-border/50 flex flex-col gap-2 relative overflow-hidden shrink-0 cursor-pointer hover:border-primary/30 hover:bg-dark/80 transition-colors"
           >
             {event.eventTriggered === "unauthorized_movement" && (
               <div className="absolute top-0 left-0 w-1 h-full bg-danger"></div>

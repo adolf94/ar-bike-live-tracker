@@ -58,7 +58,17 @@ function MapResizer() {
   return null;
 }
 
-export function MapView({ location, isOnline, theme }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark' }) {
+function FlyToMapUpdater({ target }: { target: LocationData | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target && target.lat && target.lng) {
+      map.flyTo([target.lat, target.lng], 18, { animate: true, duration: 1 });
+    }
+  }, [target, map]);
+  return null;
+}
+
+export function MapView({ location, isOnline, theme, targetLocation }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark'; targetLocation?: LocationData | null }) {
   const position: [number, number] = [location.lat || 0, location.lng || 0];
 
   return (
@@ -86,6 +96,7 @@ export function MapView({ location, isOnline, theme }: { location: LocationData;
         />
         <MapResizer />
         <MapUpdater center={position} />
+        <FlyToMapUpdater target={targetLocation ?? null} />
         {location.lat !== 0 && (
           <Marker position={position} icon={vehicleIcon}>
             <Popup className="rounded-xl">
