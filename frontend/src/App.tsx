@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { MapView } from './components/Map';
 import { StatusGrid } from './components/StatusGrid';
 import { StatusGridSkeleton } from './components/StatusGridSkeleton';
@@ -9,16 +9,14 @@ import { NotificationToast } from './components/NotificationToast';
 import { useWebPubSub } from './hooks/useWebPubSub';
 import { useCurrentTelemetry, useTelemetryEvents, useRefreshTelemetry, useCachedTelemetry } from './hooks/useTelemetryQueries';
 import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut, RefreshCw } from 'lucide-react';
-import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
-import api, { setupAxiosAuth } from './utils/api';
+import { setupAxiosAuth } from './utils/api';
 import { formatDisplayDate } from './utils/date';
 import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
-import { queryClient } from './lib/queryClient';
 
 function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'light' | 'dark' | ((prev: 'light' | 'dark') => 'light' | 'dark')) => void }) {
-  const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading, idToken } = useAuth();
+  const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -32,7 +30,6 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     isLoading: currentLoading, 
     isFetching: currentFetching,
     error: currentError,
-    refetch: refetchCurrent 
   } = useCurrentTelemetry();
 
   const { 
@@ -40,7 +37,6 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     isLoading: eventsLoading, 
     isFetching: eventsFetching,
     error: eventsError,
-    refetch: refetchEvents 
   } = useTelemetryEvents(20);
 
   const { refreshAll } = useRefreshTelemetry();
@@ -227,7 +223,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
         </div>
       </main>
       <PubSubDebugger
-        latestData={latestData}
+        latestData={latestData || null}
         isSubscribed={isSubscribed}
         setEvents={() => {}}
         setLatestData={() => {}}

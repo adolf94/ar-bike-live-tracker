@@ -60,7 +60,6 @@
 
 ---
 
-## — CONTINUED BELOW —
 
 ## 3. Data Models & Schema
 
@@ -187,7 +186,6 @@ Event detection uses composite logic combining multiple telemetry parameters to 
 
 ---
 
-## — CONTINUED BELOW —
 
 ## 5. System Sequence Flow
 

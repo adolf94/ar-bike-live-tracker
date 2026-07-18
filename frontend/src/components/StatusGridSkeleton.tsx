@@ -1,5 +1,3 @@
-import { cn } from '../lib/utils';
-
 export function StatusGridSkeleton() {
   return (
     <div className="grid grid-cols-4 md:grid-cols-2 gap-2 md:gap-4">

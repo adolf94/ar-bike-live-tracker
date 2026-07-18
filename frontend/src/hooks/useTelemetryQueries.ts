@@ -50,7 +50,7 @@ export function useTelemetryEvents(limit: number = 20) {
       if (error?.response?.status === 401) {
         return false;
       }
-      return failureCount <漁;
+      return failureCount < 3;
     },
   });
 }

@@ -1,4 +1,5 @@
-import { ReactNode, useEffect } from 'react';
+import type { ReactNode } from 'react';
+import { useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { ReactQueryDevtools } from '@tanstack/react-query-devtools';
 import { queryClient, clearUserCache } from '../lib/queryClient';
@@ -9,7 +10,7 @@ interface QueryProviderProps {
 }
 
 export function QueryProvider({ children }: QueryProviderProps) {
-  const { isAuthenticated, isLoading: isAuthLoading, logout } = useAuth();
+  const { isAuthenticated, isLoading: isAuthLoading } = useAuth();
 
   // Clear cache when user logs out
   useEffect(() => {
@@ -40,7 +41,7 @@ export function QueryProvider({ children }: QueryProviderProps) {
       {import.meta.env.DEV && (
         <ReactQueryDevtools 
           initialIsOpen={false}
-          position="bottom-right"
+          position="bottom"
           buttonPosition="bottom-left"
         />
       )}
