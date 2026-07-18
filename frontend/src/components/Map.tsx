@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -16,6 +16,18 @@ let DefaultIcon = L.icon({
 });
 
 L.Marker.prototype.options.icon = DefaultIcon;
+
+// Temporary pin icon for clicked locations
+const tempPinIcon = L.divIcon({
+  className: 'bg-transparent border-none',
+  html: `<div class="relative w-10 h-10">
+          <div class="absolute inset-0 rounded-full bg-warning/30 animate-ping"></div>
+          <div class="absolute inset-2 rounded-full bg-warning border-2 border-warning"></div>
+          <div class="absolute inset-3 rounded-full bg-white"></div>
+         </div>`,
+  iconSize: [40, 40],
+  iconAnchor: [20, 40]
+});
 
 // Custom vehicle icon
 const vehicleIcon = L.divIcon({
@@ -58,18 +70,42 @@ function MapResizer() {
   return null;
 }
 
-function FlyToMapUpdater({ target }: { target: LocationData | null }) {
+function FlyToMapUpdater({ target, onFlyComplete }: { target: LocationData | null; onFlyComplete?: () => void }) {
   const map = useMap();
+  const timeoutRef = useRef<number | null>(null);
+  
   useEffect(() => {
     if (target && target.lat && target.lng) {
       map.flyTo([target.lat, target.lng], 18, { animate: true, duration: 1 });
+      
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      
+      timeoutRef.current = window.setTimeout(() => {
+        onFlyComplete?.();
+      }, 1200);
     }
-  }, [target, map]);
+    
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [target, map, onFlyComplete]);
   return null;
 }
 
 export function MapView({ location, isOnline, theme, targetLocation }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark'; targetLocation?: LocationData | null }) {
   const position: [number, number] = [location.lat || 0, location.lng || 0];
+  const [tempPin, setTempPin] = useState<LocationData | null>(null);
+  
+  const handleFlyComplete = () => {
+    setTempPin(targetLocation ?? null);
+    setTimeout(() => {
+      setTempPin(null);
+    }, 3000);
+  };
 
   return (
     <div className="absolute inset-0 rounded-2xl md:rounded-3xl overflow-hidden border border-dark-border z-0">
@@ -96,7 +132,15 @@ export function MapView({ location, isOnline, theme, targetLocation }: { locatio
         />
         <MapResizer />
         <MapUpdater center={position} />
-        <FlyToMapUpdater target={targetLocation ?? null} />
+        <FlyToMapUpdater target={targetLocation ?? null} onFlyComplete={handleFlyComplete} />
+        {tempPin && tempPin.lat && tempPin.lng && (
+          <Marker position={[tempPin.lat, tempPin.lng]} icon={tempPinIcon}>
+            <Popup className="rounded-xl">
+              <div className="font-semibold text-slate-100">Selected Location</div>
+              <div className="text-slate-400 text-sm mt-1">Clicked event location</div>
+            </Popup>
+          </Marker>
+        )}
         {location.lat !== 0 && (
           <Marker position={position} icon={vehicleIcon}>
             <Popup className="rounded-xl">
