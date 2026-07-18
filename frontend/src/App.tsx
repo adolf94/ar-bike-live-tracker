@@ -38,7 +38,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     isLoading: eventsLoading, 
     isFetching: eventsFetching,
     error: eventsError,
-  } = useTelemetryEvents(20);
+  } = useTelemetryEvents(40);
 
   const { refreshAll } = useRefreshTelemetry();
   const { getCachedCurrent, getCachedEvents } = useCachedTelemetry();
@@ -64,6 +64,12 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   };
 
   const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
+
+  const handleFlyToLatest = () => {
+    if (latestData?.location) {
+      setFlyToLocation(latestData.location);
+    }
+  };
 
   const handleSelectEvent = (location: LocationData) => {
     setFlyToLocation(location);
@@ -202,19 +208,33 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
 
             {/* Overlay Stats */}
             <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
-              <div>
-                <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
-                <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
-                  <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                  {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
+              <button
+                onClick={handleFlyToLatest}
+                className="text-left hover:bg-dark-border/20 rounded-lg p-1 transition-colors cursor-pointer"
+                title="Fly to latest location"
+                disabled={!latestData?.location || (locationData.lat === 0 && locationData.lng === 0)}
+              >
+                <div>
+                  <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
+                  <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                    <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                    {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
+                  </div>
                 </div>
-              </div>
+              </button>
               <div className="border-t border-dark-border/50 pt-1">
-                <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
-                <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
-                  <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
-                  {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
-                </div>
+                <button
+                  onClick={handleFlyToLatest}
+                  className="text-left hover:bg-dark-border/20 rounded-lg p-1 transition-colors cursor-pointer w-full"
+                  title="Fly to latest location"
+                  disabled={!latestData?.location || (locationData.lat === 0 && locationData.lng === 0)}
+                >
+                  <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
+                  <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                    <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
+                    {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
+                  </div>
+                </button>
               </div>
             </div>
           </div>

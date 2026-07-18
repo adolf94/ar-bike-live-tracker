@@ -85,9 +85,15 @@ export function EventLog({ events, onSelectEvent }: EventLogProps) {
                   {getEventLabel(event.eventTriggered)}
                 </span>
               </div>
-              <div className="flex items-center gap-1 text-xs text-slate-500">
-                <Clock className="w-3 h-3" />
-                {formatEventTime(event.status_updated_at)}
+              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                <Clock className="w-3 h-3 shrink-0" />
+                <div className="flex flex-col items-end gap-0">
+                  {formatEventTime(event.status_updated_at).split('\n').map((line, i) => (
+                    <span key={i} className={i === 0 ? "font-medium text-slate-400" : "text-[10px] text-slate-500"}>
+                      {line}
+                    </span>
+                  ))}
+                </div>
               </div>
             </div>
 
