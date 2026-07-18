@@ -1,8 +1,10 @@
 import { useEffect, useState, useRef } from 'react';
 import { WebPubSubClient } from '@azure/web-pubsub-client';
 import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import { useQueryClient } from '@tanstack/react-query';
 import type { TelemetryDocument } from '../types';
 import api from '../utils/api';
+import { telemetryQueryKeys } from './useTelemetryQueries';
 
 interface NegotiateResponse {
   provider: 'signalr' | 'webpubsub';
@@ -10,10 +12,9 @@ interface NegotiateResponse {
 }
 
 export function useWebPubSub(getAccessToken?: () => Promise<string | null>) {
-  const [latestData, setLatestData] = useState<TelemetryDocument | null>(null);
   const [latestEvent, setLatestEvent] = useState<TelemetryDocument | null>(null);
-  const [events, setEvents] = useState<TelemetryDocument[]>([]);
   const [isSubscribed, setIsSubscribed] = useState(false);
+  const queryClient = useQueryClient();
 
   const wpsClientRef = useRef<WebPubSubClient | null>(null);
   const srConnectionRef = useRef<HubConnection | null>(null);
@@ -32,11 +33,22 @@ export function useWebPubSub(getAccessToken?: () => Promise<string | null>) {
 
         const handleNewMessage = (doc: TelemetryDocument) => {
           if (!isMounted) return;
-          setLatestData(doc);
+
+          // Update current telemetry cache
+          queryClient.setQueryData(telemetryQueryKeys.current(), doc);
 
           if (doc.eventTriggered) {
+            // Set latest event for notification toast
             setLatestEvent(doc);
-            setEvents(prev => [doc, ...prev].slice(0, 50));
+
+            // Update events list in cache
+            queryClient.setQueryData<TelemetryDocument[]>(
+              telemetryQueryKeys.events(),
+              (oldEvents = []) => {
+                // Add new event to the beginning, keep only last 50
+                return [doc, ...oldEvents].slice(0, 50);
+              }
+            );
           }
         };
 
@@ -113,7 +125,7 @@ export function useWebPubSub(getAccessToken?: () => Promise<string | null>) {
         srConnectionRef.current.stop();
       }
     };
-  }, [getAccessToken]);
+  }, [getAccessToken, queryClient]);
 
-  return { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData };
+  return { latestEvent, isSubscribed };
 }

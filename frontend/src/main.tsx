@@ -1,6 +1,7 @@
 import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
 import { AuthProvider } from '@adolf94/ar-auth-client'
+import { QueryProvider } from './providers/QueryProvider'
 import './index.css'
 import App from './App.tsx'
 
@@ -31,7 +32,9 @@ function Main() {
 
   return (
     <AuthProvider config={authConfig}>
-      <App theme={theme} setTheme={setTheme} />
+      <QueryProvider>
+        <App theme={theme} setTheme={setTheme} />
+      </QueryProvider>
     </AuthProvider>
   );
 }

@@ -1,19 +1,24 @@
 import { useEffect, useState } from 'react';
 import { MapView } from './components/Map';
 import { StatusGrid } from './components/StatusGrid';
+import { StatusGridSkeleton } from './components/StatusGridSkeleton';
 import { EventLog } from './components/EventLog';
+import { EventLogSkeleton } from './components/EventLogSkeleton';
+import { MapViewSkeleton } from './components/MapViewSkeleton';
 import { NotificationToast } from './components/NotificationToast';
 import { useWebPubSub } from './hooks/useWebPubSub';
-import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut } from 'lucide-react';
+import { useCurrentTelemetry, useTelemetryEvents, useRefreshTelemetry, useCachedTelemetry } from './hooks/useTelemetryQueries';
+import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut, RefreshCw } from 'lucide-react';
 import type { TelemetryDocument } from './types';
 import { DeviceControls } from './components/DeviceControls';
 import api, { setupAxiosAuth } from './utils/api';
 import { formatDisplayDate } from './utils/date';
 import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
+import { queryClient } from './lib/queryClient';
 
 function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'light' | 'dark' | ((prev: 'light' | 'dark') => 'light' | 'dark')) => void }) {
-  const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading } = useAuth();
+  const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading, idToken } = useAuth();
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -21,58 +26,47 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     }
   }, [isAuthenticated, getAccessToken, login]);
 
-  // Only initialize subscriptions if authenticated
-  const { latestData, latestEvent, events, isSubscribed, setEvents, setLatestData } = useWebPubSub(isAuthenticated ? getAccessToken : undefined);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  const [apiError, setApiError] = useState<string | null>(null);
+  // Use TanStack Query hooks for data fetching
+  const { 
+    data: currentData, 
+    isLoading: currentLoading, 
+    isFetching: currentFetching,
+    error: currentError,
+    refetch: refetchCurrent 
+  } = useCurrentTelemetry();
 
-  // Initial fetch of history and current state
-  useEffect(() => {
-    async function loadInitialData() {
-      if (!isAuthenticated) return;
+  const { 
+    data: eventsData = [], 
+    isLoading: eventsLoading, 
+    isFetching: eventsFetching,
+    error: eventsError,
+    refetch: refetchEvents 
+  } = useTelemetryEvents(20);
 
-      try {
-        setIsDataLoading(true);
+  const { refreshAll } = useRefreshTelemetry();
+  const { getCachedCurrent, getCachedEvents } = useCachedTelemetry();
 
-        const [currentRes, eventsRes] = await Promise.all([
-          api.get<TelemetryDocument>('/api/telemetry/current'),
-          api.get<TelemetryDocument[]>('/api/telemetry/events', { params: { limit: 20 } })
-        ]);
+  // Check if we have cached data to determine if we should show skeletons
+  const hasCachedCurrent = !!getCachedCurrent();
+  const hasCachedEvents = !!getCachedEvents()?.length;
 
-        setLatestData(prev => prev || currentRes.data); // Only set if PubSub hasn't already fired
-        setEvents(prev => prev.length > 0 ? prev : eventsRes.data);
-      } catch (error) {
-        console.error("Failed to load initial data", error);
-        setApiError("Cannot connect to backend API");
-      } finally {
-        setIsDataLoading(false);
-      }
-    }
+  // Get data from either fresh query or cache
+  const latestData = currentData || getCachedCurrent();
+  const events = eventsData.length > 0 ? eventsData : (getCachedEvents() || []);
 
-    loadInitialData();
-  }, [isAuthenticated, getAccessToken, setLatestData, setEvents]);
+  // Only initialize WebSocket subscriptions if authenticated
+  // WebSocket will update the TanStack Query cache directly
+  const { latestEvent, isSubscribed } = useWebPubSub(isAuthenticated ? getAccessToken : undefined);
 
-  // Fallback HTTP polling loop: runs every 20 seconds only if Web PubSub is not subscribed/connected
-  useEffect(() => {
-    if (!isAuthenticated || isSubscribed) return;
+  // Combine errors
+  const apiError = currentError?.message || eventsError?.message || null;
 
-    console.log("Web PubSub disconnected. Starting fallback telemetry polling (20s interval)...");
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    refreshAll();
+  };
 
-    const pollInterval = setInterval(async () => {
-      try {
-        const res = await api.get<TelemetryDocument>('/api/telemetry/current');
-        setLatestData(res.data);
-      } catch (error) {
-        console.error("Fallback telemetry polling failed:", error);
-      }
-    }, 20000); // 20 seconds
-
-    return () => {
-      console.log("Clearing fallback telemetry polling interval.");
-      clearInterval(pollInterval);
-    };
-  }, [isAuthenticated, isSubscribed, setLatestData]);
-
+  // Show loading state only while auth is loading
   if (isAuthLoading) {
     return (
       <div className="min-h-screen bg-dark flex items-center justify-center">
@@ -81,6 +75,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     );
   }
 
+  // Show login screen if not authenticated
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-dark flex flex-col items-center justify-center text-slate-200">
@@ -102,16 +97,15 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     );
   }
 
-  if (isDataLoading) {
-    return (
-      <div className="min-h-screen bg-dark flex items-center justify-center">
-        <div className="w-12 h-12 rounded-full border-4 border-dark-border border-t-primary animate-spin"></div>
-      </div>
-    );
-  }
-
+  // Get location and status data with fallbacks
   const locationData = latestData?.location || { lat: 0, lng: 0, course: 0 };
   const statusData = latestData?.status || { speed: 0, batteryLevel: 0, isIgnitionOn: false, isOnline: false };
+
+  // Determine if we should show skeletons
+  // Show skeleton if: loading AND no cached data
+  const showStatusGridSkeleton = currentLoading && !hasCachedCurrent;
+  const showMapSkeleton = currentLoading && !hasCachedCurrent;
+  const showEventLogSkeleton = eventsLoading && !hasCachedEvents;
 
   return (
     <div className="h-[100dvh] bg-dark text-slate-200 flex flex-col font-sans overflow-hidden">
@@ -132,11 +126,32 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
               <ServerCrash className="w-3 h-3 md:w-4 md:h-4" /> <span className="hidden md:inline">{apiError}</span>
             </div>
           )}
+          
+          {/* Refresh Button */}
+          <button
+            onClick={handleManualRefresh}
+            disabled={currentFetching || eventsFetching}
+            className="p-1.5 md:p-2 rounded-xl border border-dark-border bg-dark-panel text-slate-300 hover:text-white hover:bg-dark-border cursor-pointer transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Refresh Data"
+          >
+            <RefreshCw className={`w-4 h-4 md:w-5 md:h-5 ${(currentFetching || eventsFetching) ? 'animate-spin' : ''}`} />
+          </button>
+
+          {/* Connection Status */}
           <div className={`flex items-center gap-1.5 md:gap-2 px-2 md:px-3 py-1 md:py-1.5 rounded-full text-xs md:text-sm font-medium border ${isSubscribed ? 'bg-success/10 border-success/20 text-success' : 'bg-warning/10 border-warning/20 text-warning'}`}>
             <div className={`w-1.5 h-1.5 md:w-2 md:h-2 rounded-full ${isSubscribed ? 'bg-success animate-pulse' : 'bg-warning'}`}></div>
             {isSubscribed ? <span className="hidden md:inline">Live Connection</span> : <span className="hidden md:inline">Connecting...</span>}
             {isSubscribed ? <span className="md:hidden">Live</span> : <span className="md:hidden">Wait...</span>}
           </div>
+
+          {/* Fetching Indicator */}
+          {(currentFetching || eventsFetching) && (
+            <div className="hidden md:flex items-center gap-1 text-xs text-slate-400">
+              <RefreshCw className="w-3 h-3 animate-spin" />
+              <span>Refreshing...</span>
+            </div>
+          )}
+
           <button
             onClick={() => setTheme(prev => prev === 'light' ? 'dark' : 'light')}
             className="p-1.5 md:p-2 rounded-xl border border-dark-border bg-dark-panel text-slate-300 hover:text-white hover:bg-dark-border cursor-pointer transition-colors shadow-sm"
@@ -159,47 +174,63 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
       <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 p-2 md:p-4 gap-2 md:gap-4">
         {/* Left Sidebar / Top on Mobile */}
         <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 shrink-0 min-h-0">
-          <StatusGrid {...statusData} course={locationData.course} />
+          {showStatusGridSkeleton ? (
+            <StatusGridSkeleton />
+          ) : (
+            <StatusGrid {...statusData} course={locationData.course} />
+          )}
 
           {/* Desktop Event Log */}
           <div className="hidden md:flex flex-1 min-h-0">
-            <EventLog events={events} />
+            {showEventLogSkeleton ? (
+              <EventLogSkeleton />
+            ) : (
+              <EventLog events={events} />
+            )}
           </div>
         </div>
 
         {/* Map Area */}
-        <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
-          <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} />
+        {showMapSkeleton ? (
+          <MapViewSkeleton />
+        ) : (
+          <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
+            <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} />
 
-          {/* Overlay Stats */}
-          <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
-            <div>
-              <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
-              <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
-                <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
+            {/* Overlay Stats */}
+            <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
+              <div>
+                <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
+                <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                  <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                  {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
+                </div>
               </div>
-            </div>
-            <div className="border-t border-dark-border/50 pt-1">
-              <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
-              <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
-                <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
-                {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
+              <div className="border-t border-dark-border/50 pt-1">
+                <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
+                <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                  <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
+                  {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
 
         {/* Mobile Event Log (shown below map, fixed height, expands on click) */}
         <div className="flex md:hidden h-32 shrink-0">
-          <EventLog events={events} />
+          {showEventLogSkeleton ? (
+            <EventLogSkeleton />
+          ) : (
+            <EventLog events={events} />
+          )}
         </div>
       </main>
       <PubSubDebugger
         latestData={latestData}
         isSubscribed={isSubscribed}
-        setEvents={setEvents}
-        setLatestData={setLatestData}
+        setEvents={() => {}}
+        setLatestData={() => {}}
       />
     </div>
   );
