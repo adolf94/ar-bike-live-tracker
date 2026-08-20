@@ -462,19 +462,21 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
           {/* Top Status & ETA Header with Driver Avatar & Minimize Button */}
           <div className="flex items-center justify-between pb-2 border-b border-slate-100 cursor-pointer" onClick={() => setIsMinimized(!isMinimized)}>
             <div className="flex items-center gap-3">
-              <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-[#ff6b00] border-2 border-white shadow-md shadow-orange-500/20 shrink-0 flex items-center justify-center">
-                <img
-                  src="/kuya.jpg"
-                  alt="Kuya AR"
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    (e.target as HTMLElement).style.display = 'none';
-                  }}
-                />
-                <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg pointer-events-none -z-10">
-                  <Bike className="w-5 h-5" />
+              {isMinimized && (
+                <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-[#ff6b00] border-2 border-white shadow-md shadow-orange-500/20 shrink-0 flex items-center justify-center">
+                  <img
+                    src="/kuya.jpg"
+                    alt="Kuya AR"
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      (e.target as HTMLElement).style.display = 'none';
+                    }}
+                  />
+                  <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg pointer-events-none -z-10">
+                    <Bike className="w-5 h-5" />
+                  </div>
                 </div>
-              </div>
+              )}
 
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#ff6b00] flex items-center gap-1">
