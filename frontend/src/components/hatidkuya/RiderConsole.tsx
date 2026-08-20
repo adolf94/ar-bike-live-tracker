@@ -54,7 +54,7 @@ interface RiderConsoleProps {
   liveTelemetry?: { lat: number; lng: number };
 }
 
-export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) {
+export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
   const [fromAddress, setFromAddress] = useState('Ayala Ave, Makati, Metro Manila');
   const [toAddress, setToAddress] = useState('BGC High Street, Taguig, Metro Manila');
   const [recipientName, setRecipientName] = useState('');
@@ -168,7 +168,7 @@ export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) 
 
   const copyTrackingLink = async () => {
     if (!order?.tracking_id) return;
-    const trackingUrl = `${window.location.origin}?track=${order.tracking_id}`;
+    const trackingUrl = `${window.location.origin}/track/${order.tracking_id}`;
     const recipientText = order.recipient_name ? ` for ${order.recipient_name}` : '';
     const itemText = order.item_description ? ` (${order.item_description})` : '';
     const shareMessage = `📦 Your package${recipientText}${itemText} is on the way via Kuya AR!\n\nTrack your live delivery in real-time:\n${trackingUrl}`;
@@ -269,7 +269,7 @@ export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) 
     };
   }, []);
 
-  const trackingFullUrl = order ? `${window.location.origin}?track=${order.tracking_id}` : '';
+  const trackingFullUrl = order ? `${window.location.origin}/track/${order.tracking_id}` : '';
 
   const activeBounds: [number, number][] = useMemo(() => {
     const list: [number, number][] = [];

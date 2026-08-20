@@ -116,13 +116,14 @@ export function DeviceControls() {
         {/* Actions Button */}
         <button
           onClick={() => setIsDropdownOpen(prev => !prev)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 md:px-4 md:py-2 rounded-xl text-xs md:text-sm font-semibold border transition-all duration-200 cursor-pointer shadow-sm select-none ${isDropdownOpen
+          className={`flex items-center gap-1.5 p-1 sm:p-1.5 md:px-3.5 md:py-2 rounded-xl text-xs md:text-sm font-semibold border transition-all duration-200 cursor-pointer shadow-sm select-none ${isDropdownOpen
             ? 'bg-primary/20 border-primary text-primary'
             : 'bg-dark-panel hover:bg-dark-border border-dark-border text-slate-300 hover:text-white'
             }`}
+          title="Device Actions"
         >
-          <Shield className="w-4 h-4" />
-          <span>Actions</span>
+          <Shield className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+          <span className="hidden md:inline">Actions</span>
         </button>
 
         {/* Backdrop for closing dropdown */}
