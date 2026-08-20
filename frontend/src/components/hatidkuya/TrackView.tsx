@@ -1,45 +1,102 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { hatidkuyaApi } from '../../utils/hatidkuyaApi';
 import type { OrderData, OrderLocation } from '../../utils/hatidkuyaApi';
 import { useHatidKuyaSignalR } from '../../hooks/useHatidKuyaSignalR';
-import { RefreshCw, ShieldAlert, ArrowLeft } from 'lucide-react';
+import {
+  RefreshCw,
+  ArrowLeft,
+  Bike,
+  Phone,
+  MessageSquare,
+  CheckCircle2,
+  Share2,
+  Check
+} from 'lucide-react';
 
 function createRiderIcon() {
   return L.divIcon({
     className: 'custom-rider-marker',
-    html: `<div style="background:#2563eb;border:3px solid #ffffff;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 15px rgba(37,99,235,0.8);"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg></div>`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 14],
+    html: `
+      <div style="position:relative;display:flex;align-items:center;justify-content:center;">
+        <div style="position:absolute;width:40px;height:40px;background:rgba(255,107,0,0.25);border-radius:50%;animation:ping 2s cubic-bezier(0,0,0.2,1) infinite;"></div>
+        <div style="background:#ff6b00;border:3px solid #ffffff;border-radius:50%;width:34px;height:34px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(255,107,0,0.6);z-index:2;">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/>
+            <path d="M12 17.5V14l-3-3 4-3 2 3h2"/>
+          </svg>
+        </div>
+      </div>`,
+    iconSize: [34, 34],
+    iconAnchor: [17, 17],
   });
 }
 
 function createSourceIcon() {
   return L.divIcon({
     className: 'custom-source-marker',
-    html: `<div style="background:#10b981;border:3px solid #ffffff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(16,185,129,0.8);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `
+      <div style="background:#10b981;border:3px solid #ffffff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(16,185,129,0.5);">
+        <div style="width:8px;height:8px;background:white;border-radius:50%;"></div>
+      </div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
   });
 }
 
 function createDestIcon() {
   return L.divIcon({
     className: 'custom-dest-marker',
-    html: `<div style="background:#ef4444;border:3px solid #ffffff;border-radius:50%;width:24px;height:24px;display:flex;align-items:center;justify-content:center;box-shadow:0 0 10px rgba(239,68,68,0.8);"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3"/></svg></div>`,
-    iconSize: [24, 24],
-    iconAnchor: [12, 12],
+    html: `
+      <div style="background:#ef4444;border:3px solid #ffffff;border-radius:50%;width:26px;height:26px;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(239,68,68,0.5);">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+      </div>`,
+    iconSize: [26, 26],
+    iconAnchor: [13, 13],
   });
 }
 
 function MapRecenter({ position }: { position: [number, number] }) {
   const map = useMap();
   useEffect(() => {
-    map.flyTo(position, map.getZoom(), { animate: true, duration: 1.5 });
-  }, [position, map]);
+    if (position && position[0] !== 0 && position[1] !== 0) {
+      map.panTo(position, { animate: true, duration: 1.0 });
+    }
+  }, [position[0], position[1], map]);
   return null;
+}
+
+function MapAutoBounds({ bounds }: { bounds: [number, number][] }) {
+  const map = useMap();
+  useEffect(() => {
+    if (bounds.length >= 2) {
+      try {
+        map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
+      } catch (e) {
+        // ignore
+      }
+    }
+  }, [bounds, map]);
+  return null;
+}
+
+function formatLocalTime(isoOrStr?: string | null): string {
+  if (!isoOrStr) return new Date().toLocaleTimeString();
+  try {
+    // If missing UTC 'Z' or offset indicator, append 'Z' so javascript parses as UTC
+    let normalized = isoOrStr.trim();
+    if (!normalized.endsWith('Z') && !/[+-]\d{2}:\d{2}$/.test(normalized)) {
+      normalized += 'Z';
+    }
+    const d = new Date(normalized);
+    return isNaN(d.getTime()) ? new Date().toLocaleTimeString() : d.toLocaleTimeString();
+  } catch {
+    return new Date().toLocaleTimeString();
+  }
 }
 
 function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): string {
@@ -66,13 +123,14 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
   const [order, setOrder] = useState<OrderData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const [riderLocation, setRiderLocation] = useState<OrderLocation | null>(null);
   const [pathHistory, setPathHistory] = useState<[number, number][]>([]);
   const [lastPingTime, setLastPingTime] = useState<string | null>(null);
 
   const defaultCenter: [number, number] = useMemo(() => [14.5547, 121.0244], []);
-  
+
   const destLocation: [number, number] = useMemo(() => {
     if (order?.to_coords?.lat && order?.to_coords?.lng) {
       return [order.to_coords.lat, order.to_coords.lng];
@@ -154,7 +212,7 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     }
   }, [trackingId]);
 
-  useHatidKuyaSignalR(trackingId, {
+  const { isConnected } = useHatidKuyaSignalR(trackingId, {
     onLocationUpdate: (loc) => {
       updateRiderPos(loc.lat, loc.lng, loc.timestamp);
     },
@@ -164,9 +222,9 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     },
   });
 
-  // Fallback Polling (every 6 seconds)
+  // Fallback HTTP Polling (Runs only if SignalR is disconnected)
   useEffect(() => {
-    if (!trackingId || order?.status === 'completed' || error) return;
+    if (!trackingId || order?.status === 'completed' || error || isConnected) return;
     const interval = setInterval(async () => {
       try {
         const data = await hatidkuyaApi.getOrder(trackingId);
@@ -186,15 +244,22 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
           setError('This order does not exist.');
         }
       }
-    }, 6000);
+    }, 15000);
     return () => clearInterval(interval);
-  }, [trackingId, order?.status, error]);
+  }, [trackingId, order?.status, error, isConnected]);
+
+  const copyTrackingLink = () => {
+    navigator.clipboard.writeText(window.location.href);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   if (loading && !order) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh] text-slate-400">
-        <RefreshCw className="w-8 h-8 text-emerald-400 animate-spin mb-3" />
-        <p className="text-sm">Loading live delivery details...</p>
+      <div className="flex flex-col items-center justify-center min-h-[70vh] text-slate-400">
+        <RefreshCw className="w-10 h-10 text-[#ff6b00] animate-spin mb-4" />
+        <p className="text-sm font-semibold text-slate-200">Connecting to live rider...</p>
+        <span className="text-xs text-slate-500 mt-1">Lalamove-powered Tracking</span>
       </div>
     );
   }
@@ -203,11 +268,13 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     const errorMsg = error || 'This order has been completed or does not exist.';
     return (
       <div className="flex items-center justify-center min-h-[70vh] px-4">
-        <div className="max-w-md w-full p-6 md:p-8 bg-slate-900/95 backdrop-blur-2xl border border-rose-500/30 rounded-3xl text-center shadow-2xl">
-          <div className="w-14 h-14 bg-rose-500/15 border border-rose-500/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
-            <ShieldAlert className="w-7 h-7 text-rose-400" />
+        <div className="max-w-md w-full p-6 md:p-8 bg-slate-900/95 backdrop-blur-2xl border border-orange-500/30 rounded-3xl text-center shadow-2xl">
+          <div className="w-16 h-16 bg-[#ff6b00]/15 border border-[#ff6b00]/30 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <CheckCircle2 className="w-8 h-8 text-[#ff6b00]" />
           </div>
-          <h2 className="text-xl font-bold text-white mb-2">Tracking Unavailable</h2>
+          <h2 className="text-xl font-bold text-white mb-2">
+            {order?.status === 'completed' ? 'Delivery Completed' : 'Tracking Unavailable'}
+          </h2>
           <p className="text-sm text-slate-300 mb-6 leading-relaxed">
             {errorMsg}
           </p>
@@ -222,7 +289,7 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
             )}
             <button
               onClick={fetchOrder}
-              className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold transition-all cursor-pointer"
+              className="px-5 py-2.5 bg-[#ff6b00] hover:bg-[#e05e00] text-white rounded-xl text-xs font-bold transition-all cursor-pointer shadow-lg shadow-orange-500/30"
             >
               Check Again
             </button>
@@ -238,96 +305,22 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     ? getDistanceKm(riderLocation.lat, riderLocation.lng, destLocation[0], destLocation[1])
     : null;
 
-  const remainingRoute: [number, number][] = riderLocation ? [riderPos, destLocation] : [];
+  // Estimated travel time calculation: assuming 25 km/h urban motorcycle speed
+  const estMins = distanceKm ? Math.max(3, Math.round((Number(distanceKm) / 15) * 60)) : null;
+
+  const activeBounds: [number, number][] = [
+    riderPos,
+    destLocation,
+    ...(sourceLocation ? [sourceLocation] : [])
+  ];
 
   return (
-    <div className="flex-1 flex flex-col h-full relative w-full overflow-hidden">
-      {/* Floating Status Banner */}
-      <div className="absolute top-4 left-4 right-4 z-[1000] max-w-xl mx-auto pointer-events-none">
-        <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/80 rounded-2xl p-4 shadow-2xl pointer-events-auto">
-          <div className="flex justify-between items-center mb-3">
-            <div className="flex items-center gap-2">
-              {onBack && (
-                <button
-                  onClick={onBack}
-                  className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 mr-1 transition-colors cursor-pointer"
-                  title="Back"
-                >
-                  <ArrowLeft className="w-4 h-4" />
-                </button>
-              )}
-              <span className={`w-2.5 h-2.5 rounded-full ${isCompleted ? 'bg-slate-500' : 'bg-emerald-400 animate-ping'}`} />
-              <span className="font-bold text-sm text-white">
-                {isCompleted ? 'Delivery Completed' : 'Rider is on the way'}
-              </span>
-            </div>
-            <span
-              className={`text-[11px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full border ${
-                isCompleted
-                  ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400'
-                  : 'bg-blue-500/15 border-blue-500/30 text-blue-400'
-              }`}
-            >
-              {order?.status?.toUpperCase()}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3 text-xs">
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">FROM</span>
-              <strong className="text-slate-200 truncate block font-medium">
-                {order?.from_address}
-              </strong>
-            </div>
-            <div>
-              <span className="text-[10px] text-slate-400 font-bold uppercase block">TO</span>
-              <strong className="text-slate-200 truncate block font-medium">
-                {order?.to_address}
-              </strong>
-            </div>
-            {(order?.recipient_name || order?.item_description) && (
-              <div className="col-span-2 pt-2 border-t border-slate-800/80 grid grid-cols-2 gap-3 text-xs">
-                {order?.recipient_name && (
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">RECIPIENT</span>
-                    <strong className="text-emerald-400 truncate block font-medium">
-                      {order.recipient_name}
-                    </strong>
-                  </div>
-                )}
-                {order?.item_description && (
-                  <div>
-                    <span className="text-[10px] text-slate-400 font-bold uppercase block">PACKAGE / ITEMS</span>
-                    <strong className="text-slate-200 truncate block font-medium">
-                      {order.item_description}
-                    </strong>
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-
-          {distanceKm && !isCompleted && (
-            <div className="mt-3 p-2 bg-emerald-500/10 border border-emerald-500/20 rounded-xl flex justify-between items-center text-xs">
-              <span className="text-slate-300 font-medium">Distance to Destination</span>
-              <strong className="text-emerald-400 font-mono font-bold">{distanceKm} km away</strong>
-            </div>
-          )}
-
-          {lastPingTime && (
-            <div className="mt-2.5 pt-2 border-t border-slate-800 flex justify-between items-center text-[10px] text-slate-400 font-mono">
-              <span>Live tracking</span>
-              <span>Updated: {new Date(lastPingTime).toLocaleTimeString()}</span>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Leaflet Map */}
+    <div className="flex-1 flex flex-col h-full relative w-full overflow-hidden bg-slate-950">
+      {/* Full Background Map */}
       <div className="absolute inset-0 z-0">
         <MapContainer
           center={riderPos}
-          zoom={14}
+          zoom={16}
           style={{ width: '100%', height: '100%' }}
           zoomControl={false}
         >
@@ -337,57 +330,32 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
           />
           <MapRecenter position={riderPos} />
 
-          {/* Breadcrumb path history */}
+          {/* Breadcrumb Traveled Trail */}
           {pathHistory.length > 1 && (
-            <>
-              <Polyline
-                positions={pathHistory}
-                pathOptions={{
-                  color: '#3b82f6',
-                  weight: 7,
-                  opacity: 0.35,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-              <Polyline
-                positions={pathHistory}
-                pathOptions={{
-                  color: '#2563eb',
-                  weight: 3.5,
-                  opacity: 0.9,
-                  lineCap: 'round',
-                  lineJoin: 'round',
-                }}
-              />
-            </>
-          )}
-
-          {/* Remaining route */}
-          {remainingRoute.length === 2 && !isCompleted && (
             <Polyline
-              positions={remainingRoute}
+              positions={pathHistory}
               pathOptions={{
-                color: '#f59e0b',
-                weight: 3,
-                opacity: 0.8,
-                dashArray: '6, 10',
+                color: '#ff6b00',
+                weight: 5,
+                opacity: 0.9,
                 lineCap: 'round',
+                lineJoin: 'round',
               }}
             />
           )}
 
-          {/* Rider Marker */}
-          {riderLocation && (
-            <Marker position={riderPos} icon={createRiderIcon()}>
-              <Popup>
-                <div className="p-1 text-slate-900 text-xs">
-                  <div className="font-bold">Kuya Rider (Live)</div>
-                  <div>Lat: {riderLocation.lat.toFixed(4)}, Lng: {riderLocation.lng.toFixed(4)}</div>
-                  {distanceKm && <div>{distanceKm} km to drop-off</div>}
-                </div>
-              </Popup>
-            </Marker>
+          {/* Remaining Path to Destination */}
+          {!isCompleted && (
+            <Polyline
+              positions={[riderPos, destLocation]}
+              pathOptions={{
+                color: '#f59e0b',
+                weight: 3.5,
+                opacity: 0.85,
+                dashArray: '8, 8',
+                lineCap: 'round',
+              }}
+            />
           )}
 
           {/* Source Pin */}
@@ -395,23 +363,196 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
             <Marker position={sourceLocation} icon={createSourceIcon()}>
               <Popup>
                 <div className="p-1 text-slate-900 text-xs">
-                  <div className="font-bold">Pickup Location</div>
+                  <div className="font-bold text-emerald-600">Pickup Point</div>
                   <div>{order?.from_address}</div>
                 </div>
               </Popup>
             </Marker>
           )}
 
-          {/* Destination Marker */}
+          {/* Destination Pin */}
           <Marker position={destLocation} icon={createDestIcon()}>
             <Popup>
               <div className="p-1 text-slate-900 text-xs">
-                <div className="font-bold">Destination</div>
+                <div className="font-bold text-rose-600">Drop-off Destination</div>
                 <div>{order?.to_address}</div>
               </div>
             </Popup>
           </Marker>
+
+          {/* Live Kuya AR Marker */}
+          {riderLocation && (
+            <Marker position={riderPos} icon={createRiderIcon()}>
+              <Popup>
+                <div className="p-1.5 text-xs">
+                  <div className="font-extrabold text-[#ff6b00] text-sm mb-1">Kuya AR (Live)</div>
+                  <div className="text-slate-100 font-mono text-[11px]">Lat: {riderLocation.lat.toFixed(4)}, Lng: {riderLocation.lng.toFixed(4)}</div>
+                  {distanceKm && <div className="text-orange-200 font-medium text-[11px] mt-0.5">{distanceKm} km away from drop-off</div>}
+                </div>
+              </Popup>
+            </Marker>
+          )}
         </MapContainer>
+      </div>
+
+      {/* Floating Header: Back Button & Live Tracking Badge */}
+      <div className="relative z-10 p-3 sm:p-4 pointer-events-none flex justify-between items-center">
+        {onBack ? (
+          <button
+            onClick={onBack}
+            className="p-2.5 rounded-2xl bg-white/95 text-slate-800 shadow-xl pointer-events-auto hover:bg-slate-100 transition-all cursor-pointer flex items-center gap-1.5 text-xs font-bold"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="hidden sm:inline">Back</span>
+          </button>
+        ) : <div />}
+
+        <div className="bg-white/95 backdrop-blur-xl border border-orange-200/80 px-3.5 py-2 rounded-2xl shadow-xl pointer-events-auto flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ff6b00] animate-ping" />
+          <span className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+            Order #{order?.tracking_id}
+          </span>
+          <button
+            onClick={copyTrackingLink}
+            className="p-1 hover:bg-orange-50 rounded-lg text-slate-500 hover:text-[#ff6b00] transition-colors"
+            title="Share Tracking Link"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Share2 className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+      </div>
+
+      {/* Lalamove-style Floating Bottom Sheet */}
+      <div className="relative z-10 mt-auto p-3 sm:p-5 pointer-events-none">
+        <div className="bg-white text-slate-900 rounded-3xl p-5 sm:p-6 shadow-2xl pointer-events-auto max-w-xl mx-auto border border-slate-200/80 flex flex-col gap-4">
+
+          {/* Top Status & ETA Header */}
+          <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-wider text-[#ff6b00] flex items-center gap-1">
+                <Bike className="w-3.5 h-3.5" /> Driver is on the way
+              </span>
+              <h3 className="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight mt-0.5">
+                {estMins ? `Arriving in ~${estMins} mins` : 'Delivering your package'}
+              </h3>
+            </div>
+            {distanceKm && (
+              <div className="text-right bg-orange-50 px-3 py-1.5 rounded-2xl border border-orange-200/60">
+                <span className="text-[10px] uppercase font-bold text-slate-500 block">Distance</span>
+                <span className="text-sm font-extrabold text-[#ff6b00] font-mono">{distanceKm} km</span>
+              </div>
+            )}
+          </div>
+
+          {/* Stepper Progress Bar */}
+          <div className="grid grid-cols-4 gap-1 items-center">
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-full h-1.5 rounded-full bg-[#ff6b00]" />
+              <span className="text-[10px] font-bold text-slate-800">Matched</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-full h-1.5 rounded-full bg-[#ff6b00]" />
+              <span className="text-[10px] font-bold text-slate-800">Pickup</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-full h-1.5 rounded-full bg-[#ff6b00] animate-pulse" />
+              <span className="text-[10px] font-bold text-[#ff6b00]">Delivering</span>
+            </div>
+            <div className="flex flex-col items-center gap-1">
+              <div className="w-full h-1.5 rounded-full bg-slate-200" />
+              <span className="text-[10px] font-bold text-slate-400">Completed</span>
+            </div>
+          </div>
+
+          {/* Driver & Vehicle Contact Card */}
+          <div className="bg-slate-50 p-3.5 rounded-2xl border border-slate-200/60 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative w-12 h-12 rounded-2xl overflow-hidden bg-[#ff6b00] border-2 border-white shadow-md shadow-orange-500/20 flex items-center justify-center">
+                <img
+                  src="/kuya.jpg"
+                  alt="Kuya AR"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = 'none';
+                  }}
+                />
+                <div className="absolute inset-0 flex items-center justify-center text-white font-bold text-lg pointer-events-none -z-10">
+                  <Bike className="w-6 h-6" />
+                </div>
+              </div>
+              <div>
+                <div className="font-bold text-sm text-slate-900">Kuya AR</div>
+                <div className="text-xs text-slate-500 flex items-center gap-1.5">
+                  <span className="bg-orange-100 text-[#ff6b00] font-bold px-1.5 py-0.2 rounded text-[10px]">Motorcycle</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <a
+                href="https://m.me/adolf28"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-emerald-50 hover:border-emerald-200 transition-colors shadow-sm cursor-pointer"
+                title="Call Kuya AR on Messenger"
+              >
+                <Phone className="w-4 h-4 text-emerald-600" />
+              </a>
+              <a
+                href="https://m.me/adolf28"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-9 h-9 rounded-xl bg-white border border-slate-200 text-slate-700 flex items-center justify-center hover:bg-orange-50 hover:border-orange-200 transition-colors shadow-sm cursor-pointer"
+                title="Message Kuya AR on Messenger"
+              >
+                <MessageSquare className="w-4 h-4 text-[#ff6b00]" />
+              </a>
+            </div>
+          </div>
+
+          {/* Trip Addresses & Package Details */}
+          <div className="space-y-2 text-xs">
+            <div className="flex items-start gap-2.5">
+              <div className="mt-1 w-2.5 h-2.5 rounded-full bg-emerald-500 shrink-0 shadow-sm" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Pick-up</span>
+                <span className="font-semibold text-slate-800 truncate block">{order?.from_address}</span>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2.5">
+              <div className="mt-1 w-2.5 h-2.5 rounded-full bg-rose-500 shrink-0 shadow-sm" />
+              <div className="min-w-0 flex-1">
+                <span className="text-[10px] uppercase font-bold text-slate-400 block">Drop-off</span>
+                <span className="font-semibold text-slate-800 truncate block">{order?.to_address}</span>
+              </div>
+            </div>
+
+            {(order?.recipient_name || order?.item_description) && (
+              <div className="pt-2 border-t border-slate-100 grid grid-cols-2 gap-2 text-xs">
+                {order.recipient_name && (
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Recipient</span>
+                    <span className="font-bold text-slate-800 truncate block">{order.recipient_name}</span>
+                  </div>
+                )}
+                {order.item_description && (
+                  <div>
+                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Items</span>
+                    <span className="font-bold text-slate-800 truncate block">{order.item_description}</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Live Updated Footer */}
+          {lastPingTime && (
+            <div className="pt-2 border-t border-slate-100 flex items-center justify-end text-[11px] text-slate-400 font-mono">
+              <span>Updated: {formatLocalTime(lastPingTime)}</span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -283,11 +283,12 @@ async def poll_telemetry(
                 final_loc = final_doc.location
                 if final_loc.get("lat") and final_loc.get("lng"):
                     order_svc = _get_order_service()
+                    # Always use valid ISO-8601 UTC string for live tracking
+                    now_iso = datetime.now(timezone.utc).isoformat()
                     timestamp_val = (
-                        final_loc.get("position_time")
-                        or getattr(final_doc, "status_updated_at", None)
+                        getattr(final_doc, "status_updated_at", None)
                         or getattr(final_doc, "last_checked_at", None)
-                        or datetime.now(timezone.utc).isoformat()
+                        or now_iso
                     )
                     updated_orders = order_svc.broadcast_telemetry_to_active_orders(
                         lat=float(final_loc["lat"]),
