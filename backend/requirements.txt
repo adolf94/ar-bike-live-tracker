@@ -6,3 +6,5 @@ obdtracker @ git+https://github.com/nyxnyx/gps_obd2_tracker.git@master
 httpx>=0.28.1
 uuid-utils>=0.17.0
 PyJWT[crypto]>=2.8.0
+pydantic>=2.0.0
+requests>=2.31.0

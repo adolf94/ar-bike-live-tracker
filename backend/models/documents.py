@@ -5,6 +5,7 @@ from __future__ import annotations
 import uuid
 import uuid_utils
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any, Dict, Optional
 
 from .telemetry import EventType, LocationInfo, StatusInfo, TelemetryState
@@ -115,3 +116,99 @@ class TelemetryDocument:
     @property
     def is_online(self) -> bool:
         return bool(self.status.get("isOnline", True))
+
+
+@dataclass
+class DeviceTokenDocument:
+    """Represents an FCM device token registered for push notifications.
+    
+    Schema::
+    
+        {
+          "id": "fcm_token_hash_or_uuid",
+          "userId": "subject_claim_from_jwt",
+          "fcmToken": "string",
+          "platform": "android",
+          "registeredAt": "ISO-8601",
+          "lastActiveAt": "ISO-8601"
+        }
+    """
+    
+    id: str
+    userId: str
+    fcmToken: str
+    platform: str
+    registeredAt: str
+    lastActiveAt: str
+    ttl: int = field(default=DEFAULT_TTL_SECONDS)
+    
+    # ------------------------------------------------------------------ #
+    #  Factory helpers
+    # ------------------------------------------------------------------ #
+    
+    @classmethod
+    def new_token(
+        cls,
+        user_id: str,
+        fcm_token: str,
+        platform: str = "android",
+    ) -> "DeviceTokenDocument":
+        """Create a new device token document."""
+        import uuid_utils
+        from datetime import datetime
+        
+        current_time = datetime.now().isoformat()
+        return cls(
+            id=str(uuid_utils.uuid7()),
+            userId=user_id,
+            fcmToken=fcm_token,
+            platform=platform,
+            registeredAt=current_time,
+            lastActiveAt=current_time,
+        )
+    
+    @classmethod
+    def from_cosmos_dict(cls, data: Dict[str, Any]) -> "DeviceTokenDocument":
+        """Deserialise a Cosmos DB query result into a device token document."""
+        return cls(
+            id=data["id"],
+            userId=data["userId"],
+            fcmToken=data["fcmToken"],
+            platform=data["platform"],
+            registeredAt=data["registeredAt"],
+            lastActiveAt=data["lastActiveAt"],
+            ttl=data.get("ttl", DEFAULT_TTL_SECONDS),
+        )
+    
+    # ------------------------------------------------------------------ #
+    #  Serialisation
+    # ------------------------------------------------------------------ #
+    
+    def to_cosmos_dict(self) -> Dict[str, Any]:
+        """Serialise for the Cosmos DB output binding."""
+        return {
+            "id": self.id,
+            "userId": self.userId,
+            "fcmToken": self.fcmToken,
+            "platform": self.platform,
+            "registeredAt": self.registeredAt,
+            "lastActiveAt": self.lastActiveAt,
+            "ttl": self.ttl,
+        }
+    
+    # ------------------------------------------------------------------ #
+    #  Methods
+    # ------------------------------------------------------------------ #
+    
+    def update_last_active(self) -> None:
+        """Update the lastActiveAt timestamp to current time."""
+        from datetime import datetime
+        self.lastActiveAt = datetime.now().isoformat()
+    
+    def is_expired(self, days_threshold: int = 30) -> bool:
+        """Check if the token is considered expired (not active for threshold days)."""
+        from datetime import datetime
+        
+        last_active = datetime.fromisoformat(self.lastActiveAt)
+        cutoff = datetime.now().utcnow() - timedelta(days=days_threshold)
+        return last_active < cutoff

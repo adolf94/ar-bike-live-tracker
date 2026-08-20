@@ -100,13 +100,20 @@ export function MapView({ location, isOnline, theme, targetLocation, showTempPin
   const position: [number, number] = [location.lat || 0, location.lng || 0];
   const [tempPin, setTempPin] = useState<LocationData | null>(null);
   
-  const handleFlyComplete = () => {
-    // Only set temp pin if showTempPin is true AND targetLocation exists
+  useEffect(() => {
+    console.log('MapView effect:', { targetLocation, showTempPin });
+    // Update temp pin when targetLocation OR showTempPin changes
     if (showTempPin && targetLocation) {
+      console.log('Setting temp pin:', targetLocation);
       setTempPin(targetLocation);
     } else {
+      console.log('Clearing temp pin');
       setTempPin(null);
     }
+  }, [targetLocation, showTempPin]);
+
+  const handleFlyComplete = () => {
+    // Animation complete callback - no longer controls temp pin state
   };
 
   return (

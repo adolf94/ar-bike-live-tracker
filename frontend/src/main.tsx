@@ -1,6 +1,6 @@
 import { StrictMode, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
-import { AuthProvider } from '@adolf94/ar-auth-client'
+import { AuthProvider, initUserManager } from '@adolf94/ar-auth-client'
 import { QueryProvider } from './providers/QueryProvider'
 import './index.css'
 import App from './App.tsx'
@@ -29,6 +29,10 @@ function Main() {
     scope: appConfig.VITE_OIDC_SCOPE || import.meta.env.VITE_OIDC_SCOPE || 'openid profile email offline_access api://bike-tracker-api/user',
     theme: theme
   };
+
+  // Pre-initialize and configure OIDC client timeout settings
+  const userManager = initUserManager(authConfig);
+  (userManager.settings as any).requestTimeoutInSeconds = 2; // Shorten timeout to 2 seconds instead of waiting 10+ seconds offline
 
   return (
     <AuthProvider config={authConfig}>

@@ -8,13 +8,15 @@ import { MapViewSkeleton } from './components/MapViewSkeleton';
 import { NotificationToast } from './components/NotificationToast';
 import { useWebPubSub } from './hooks/useWebPubSub';
 import { useCurrentTelemetry, useTelemetryEvents, useRefreshTelemetry, useCachedTelemetry } from './hooks/useTelemetryQueries';
-import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut, RefreshCw } from 'lucide-react';
+import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut, RefreshCw, Send } from 'lucide-react';
 import { DeviceControls } from './components/DeviceControls';
 import { setupAxiosAuth } from './utils/api';
 import { formatDisplayDate } from './utils/date';
 import { PubSubDebugger } from './components/PubSubDebugger';
 import { useAuth } from '@adolf94/ar-auth-client';
 import type { LocationData } from './types';
+import { RiderConsole } from './components/hatidkuya/RiderConsole';
+import { TrackView } from './components/hatidkuya/TrackView';
 
 function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'light' | 'dark' | ((prev: 'light' | 'dark') => 'light' | 'dark')) => void }) {
   const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading } = useAuth();
@@ -66,6 +68,59 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
   const [showTempPin, setShowTempPin] = useState(false);
 
+  // Submenu / Navigation Tab ('telemetry' | 'hatidkuya')
+  const [activeTab, setActiveTab] = useState<'telemetry' | 'hatidkuya'>('telemetry');
+  const [trackedOrderId, setTrackedOrderId] = useState<string | null>(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    return urlParams.get('track');
+  });
+
+  useEffect(() => {
+    const handlePopState = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      setTrackedOrderId(urlParams.get('track'));
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  const handleOpenTrack = (id: string) => {
+    setTrackedOrderId(id);
+    const newUrl = `${window.location.pathname}?track=${id}`;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+  };
+
+  const handleBackFromTrack = () => {
+    setTrackedOrderId(null);
+    const newUrl = window.location.pathname;
+    window.history.pushState({ path: newUrl }, '', newUrl);
+  };
+
+  // If public tracking URL is requested, show Recipient Track view immediately without requiring login
+  if (trackedOrderId) {
+    return (
+      <div className="h-[100dvh] bg-dark text-slate-200 flex flex-col font-sans overflow-hidden">
+        <header className="h-14 border-b border-dark-border bg-dark-panel flex items-center justify-between px-4 md:px-6 shrink-0 z-10">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 bg-primary/20 rounded-lg text-primary">
+              <Bike className="w-4 h-4 md:w-5 md:h-5" />
+            </div>
+            <span className="text-base font-bold text-white tracking-tight">HatidKuya <span className="text-primary font-medium">Live Tracking</span></span>
+          </div>
+          <button
+            onClick={handleBackFromTrack}
+            className="text-xs px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+          >
+            Dashboard
+          </button>
+        </header>
+        <div className="flex-1 w-full h-full min-h-0 relative">
+          <TrackView trackingId={trackedOrderId} onBack={handleBackFromTrack} />
+        </div>
+      </div>
+    );
+  }
+
   const handleFlyToLatest = () => {
     if (latestData?.location) {
       setFlyToLocation(latestData.location);
@@ -74,6 +129,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   };
 
   const handleSelectEvent = (location: LocationData) => {
+    console.log('Event log clicked, location:', location);
     setFlyToLocation(location);
     setShowTempPin(true); // Show temp pin for event log clicks
   };
@@ -125,11 +181,39 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
 
       {/* Header */}
       <header className="h-14 md:h-16 border-b border-dark-border bg-dark-panel flex items-center justify-between px-4 md:px-6 shrink-0 z-10 relative shadow-md">
-        <div className="flex items-center gap-2 md:gap-3">
-          <div className="p-1.5 md:p-2 bg-primary/20 rounded-lg text-primary">
-            <Bike className="w-4 h-4 md:w-5 md:h-5" />
+        <div className="flex items-center gap-4 md:gap-6">
+          <div className="flex items-center gap-2 md:gap-3">
+            <div className="p-1.5 md:p-2 bg-primary/20 rounded-lg text-primary">
+              <Bike className="w-4 h-4 md:w-5 md:h-5" />
+            </div>
+            <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">Bike<span className="text-primary font-medium ml-1">Tracker</span></h1>
           </div>
-          <h1 className="text-lg md:text-xl font-bold tracking-tight text-white">Bike<span className="text-primary font-medium ml-1">Tracker</span></h1>
+
+          {/* Feature Submenu Tabs */}
+          <nav className="flex items-center bg-slate-900/60 p-1 rounded-xl border border-dark-border">
+            <button
+              onClick={() => setActiveTab('telemetry')}
+              className={`px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'telemetry'
+                  ? 'bg-primary text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Activity className="w-3.5 h-3.5" />
+              <span>Telemetry</span>
+            </button>
+            <button
+              onClick={() => setActiveTab('hatidkuya')}
+              className={`px-3 py-1 md:py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
+                activeTab === 'hatidkuya'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              <Send className="w-3.5 h-3.5" />
+              <span>HatidKuya</span>
+            </button>
+          </nav>
         </div>
 
         <div className="flex items-center gap-3 md:gap-4">
@@ -183,81 +267,92 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 p-2 md:p-4 gap-2 md:gap-4">
-        {/* Left Sidebar / Top on Mobile */}
-        <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 shrink-0 min-h-0">
-          {showStatusGridSkeleton ? (
-            <StatusGridSkeleton />
+      {activeTab === 'hatidkuya' ? (
+        <main className="flex-1 flex flex-col min-h-0 overflow-hidden p-0 sm:p-2">
+          <RiderConsole
+            onOpenTrack={handleOpenTrack}
+            liveTelemetry={locationData}
+          />
+        </main>
+      ) : (
+        <main className="flex-1 flex flex-col md:flex-row overflow-hidden min-h-0 p-2 md:p-4 gap-2 md:gap-4">
+          {/* Left Sidebar / Top on Mobile */}
+          <div className="w-full md:w-80 flex flex-col gap-2 md:gap-4 shrink-0 min-h-0">
+            {showStatusGridSkeleton ? (
+              <StatusGridSkeleton />
+            ) : (
+              <StatusGrid {...statusData} course={locationData.course} />
+            )}
+
+            {/* Desktop Event Log */}
+            <div className="hidden md:flex flex-1 min-h-0">
+              {showEventLogSkeleton ? (
+                <EventLogSkeleton />
+              ) : (
+                <EventLog events={events} onSelectEvent={handleSelectEvent} />
+              )}
+            </div>
+          </div>
+
+          {/* Map Area */}
+          {showMapSkeleton ? (
+            <MapViewSkeleton />
           ) : (
-            <StatusGrid {...statusData} course={locationData.course} />
+            <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
+              <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} targetLocation={flyToLocation} showTempPin={showTempPin} />
+
+              {/* Overlay Stats */}
+              <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
+                <button
+                  onClick={handleFlyToLatest}
+                  className="text-left hover:bg-dark-border/20 rounded-lg p-1 transition-colors cursor-pointer"
+                  title="Fly to latest location"
+                  disabled={!latestData?.location || (locationData.lat === 0 && locationData.lng === 0)}
+                >
+                  <div>
+                    <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
+                    <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                      <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
+                      {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
+                    </div>
+                  </div>
+                </button>
+                <div className="border-t border-dark-border/50 pt-1">
+                  <button
+                    onClick={handleFlyToLatest}
+                    className="text-left hover:bg-dark-border/20 rounded-lg p-1 transition-colors cursor-pointer w-full"
+                    title="Fly to latest location"
+                    disabled={!latestData?.location || (locationData.lat === 0 && locationData.lng === 0)}
+                  >
+                    <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
+                    <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
+                      <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
+                      {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
 
-          {/* Desktop Event Log */}
-          <div className="hidden md:flex flex-1 min-h-0">
+          {/* Mobile Event Log (shown below map, fixed height, expands on click) */}
+          <div className="flex md:hidden h-32 shrink-0">
             {showEventLogSkeleton ? (
               <EventLogSkeleton />
             ) : (
               <EventLog events={events} onSelectEvent={handleSelectEvent} />
             )}
           </div>
-        </div>
-
-        {/* Map Area */}
-        {showMapSkeleton ? (
-          <MapViewSkeleton />
-        ) : (
-          <div className="flex-1 relative bg-dark-panel rounded-2xl md:rounded-3xl border border-dark-border shadow-lg overflow-hidden min-h-[200px]">
-            <MapView location={locationData} isOnline={statusData.isOnline} theme={theme} targetLocation={flyToLocation} showTempPin={showTempPin} />
-
-            {/* Overlay Stats */}
-            <div className="absolute top-2 left-2 md:top-4 md:left-4 z-10 bg-dark-panel/90 backdrop-blur-md border border-dark-border px-3 py-1.5 md:px-4 md:py-2 rounded-xl shadow-lg flex flex-col gap-1 md:gap-1.5">
-              <button
-                onClick={handleFlyToLatest}
-                className="text-left hover:bg-dark-border/20 rounded-lg p-1 transition-colors cursor-pointer"
-                title="Fly to latest location"
-                disabled={!latestData?.location || (locationData.lat === 0 && locationData.lng === 0)}
-              >
-                <div>
-                  <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">Last Checked</div>
-                  <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
-                    <Activity className="w-3 h-3 md:w-4 md:h-4 text-primary" />
-                    {latestData?.last_checked_at ? formatDisplayDate(latestData.last_checked_at) : 'Never'}
-                  </div>
-                </div>
-              </button>
-              <div className="border-t border-dark-border/50 pt-1">
-                <button
-                  onClick={handleFlyToLatest}
-                  className="text-left hover:bg-dark-border/20 rounded-lg p-1 transition-colors cursor-pointer w-full"
-                  title="Fly to latest location"
-                  disabled={!latestData?.location || (locationData.lat === 0 && locationData.lng === 0)}
-                >
-                  <div className="text-[9px] md:text-[10px] text-slate-400 font-medium uppercase tracking-wider mb-0.5">State Updated</div>
-                  <div className="text-xs md:text-sm font-semibold text-slate-100 flex items-center gap-1.5">
-                    <Clock className="w-3 h-3 md:w-4 md:h-4 text-slate-400" />
-                    {latestData?.status_updated_at ? formatDisplayDate(latestData.status_updated_at) : 'Never'}
-                  </div>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Event Log (shown below map, fixed height, expands on click) */}
-        <div className="flex md:hidden h-32 shrink-0">
-          {showEventLogSkeleton ? (
-            <EventLogSkeleton />
-          ) : (
-            <EventLog events={events} onSelectEvent={handleSelectEvent} />
-          )}
-        </div>
-      </main>
-      <PubSubDebugger
-        latestData={latestData || null}
-        isSubscribed={isSubscribed}
-        setEvents={() => {}}
-        setLatestData={() => {}}
-      />
+        </main>
+      )}
+      {activeTab === 'telemetry' && (
+        <PubSubDebugger
+          latestData={latestData || null}
+          isSubscribed={isSubscribed}
+          setEvents={() => {}}
+          setLatestData={() => {}}
+        />
+      )}
     </div>
   );
 }
