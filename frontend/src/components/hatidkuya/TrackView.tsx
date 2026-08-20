@@ -265,8 +265,31 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     return () => clearInterval(interval);
   }, [trackingId, order?.status, error, isConnected]);
 
-  const copyTrackingLink = () => {
-    navigator.clipboard.writeText(window.location.href);
+  const copyTrackingLink = async () => {
+    const trackingUrl = window.location.href;
+    const recipientText = order?.recipient_name ? ` for ${order.recipient_name}` : '';
+    const itemText = order?.item_description ? ` (${order.item_description})` : '';
+    const shareMessage = `📦 Your package${recipientText}${itemText} is on the way via Kuya AR!\n\nTrack your live delivery in real-time:\n${trackingUrl}`;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareMessage);
+      }
+    } catch {
+      // fallback
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Live Package Tracking - Kuya AR',
+          text: shareMessage,
+        });
+      } catch {
+        // user closed native sheet
+      }
+    }
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };

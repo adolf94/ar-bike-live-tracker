@@ -166,10 +166,32 @@ export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) 
     }
   };
 
-  const copyTrackingLink = () => {
+  const copyTrackingLink = async () => {
     if (!order?.tracking_id) return;
     const trackingUrl = `${window.location.origin}?track=${order.tracking_id}`;
-    navigator.clipboard.writeText(trackingUrl);
+    const recipientText = order.recipient_name ? ` for ${order.recipient_name}` : '';
+    const itemText = order.item_description ? ` (${order.item_description})` : '';
+    const shareMessage = `📦 Your package${recipientText}${itemText} is on the way via Kuya AR!\n\nTrack your live delivery in real-time:\n${trackingUrl}`;
+
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareMessage);
+      }
+    } catch {
+      // fallback
+    }
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: 'Live Delivery Tracking - Kuya AR',
+          text: shareMessage,
+        });
+      } catch {
+        // user closed native sheet
+      }
+    }
+
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   };
@@ -509,15 +531,15 @@ export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) 
                 {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 {copied ? 'Copied' : 'Share'}
               </button>
-              {onOpenTrack && (
-                <button
-                  onClick={() => onOpenTrack(order.tracking_id)}
-                  className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 p-1.5 rounded-xl transition-all cursor-pointer"
-                  title="View Recipient Screen"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-              )}
+              <a
+                href={trackingFullUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center"
+                title="View Recipient Screen (Opens in new tab)"
+              >
+                <ExternalLink className="w-4 h-4" />
+              </a>
             </div>
           </div>
 
