@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo, useRef } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -69,20 +69,6 @@ function MapRecenter({ position }: { position: [number, number] }) {
       map.panTo(position, { animate: true, duration: 1.0 });
     }
   }, [position[0], position[1], map]);
-  return null;
-}
-
-function MapAutoBounds({ bounds }: { bounds: [number, number][] }) {
-  const map = useMap();
-  useEffect(() => {
-    if (bounds.length >= 2) {
-      try {
-        map.fitBounds(bounds, { padding: [70, 70], maxZoom: 16 });
-      } catch (e) {
-        // ignore
-      }
-    }
-  }, [bounds, map]);
   return null;
 }
 
