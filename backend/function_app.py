@@ -870,6 +870,27 @@ def update_order_location(req: func.HttpRequest) -> func.HttpResponse:
         return _json_cors_response({"error": str(e)}, status_code=400)
 
 
+@app.function_name("update_order_stage")
+@app.route(route="orders/{orderId}/stage", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
+def update_order_stage(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return _json_cors_response({}, 200)
+    order_id = req.route_params.get("orderId")
+    if not order_id:
+        return _json_cors_response({"error": "orderId is required"}, status_code=400)
+
+    try:
+        body = req.get_json()
+        stage = body.get("stage") or body.get("delivery_stage") or "going_to_pickup"
+        updated = _get_order_service().update_delivery_stage(order_id, stage)
+        if not updated:
+            return _json_cors_response({"error": "Order not found"}, status_code=404)
+        return _json_cors_response(updated, status_code=200)
+    except Exception as e:
+        logger.exception("Error updating delivery stage: %s", e)
+        return _json_cors_response({"error": str(e)}, status_code=400)
+
+
 @app.function_name("complete_order")
 @app.route(route="orders/{orderId}/complete", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
 def complete_order(req: func.HttpRequest) -> func.HttpResponse:

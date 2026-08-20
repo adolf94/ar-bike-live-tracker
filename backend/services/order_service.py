@@ -162,17 +162,28 @@ class OrderService:
     def get_order_history(self, tracking_id: str) -> list[Dict[str, Any]]:
         return self.order_repo.get_location_history(tracking_id)
 
-    def complete_order(self, order_id: str) -> Optional[Dict[str, Any]]:
+    def update_delivery_stage(self, order_id: str, delivery_stage: str) -> Optional[Dict[str, Any]]:
         order = self.order_repo.get_by_id(order_id)
         if not order:
             return None
 
-        order["status"] = "completed"
+        order["delivery_stage"] = delivery_stage
+        if delivery_stage == "completed":
+            order["status"] = "completed"
+
         updated = self.order_repo.update(order)
 
-        # Broadcast completion event to SignalR group
         tracking_id = order.get("tracking_id")
         if tracking_id:
-            self.signalr_publisher.publish_order_completed(tracking_id)
+            if delivery_stage == "completed":
+                self.signalr_publisher.publish_order_completed(tracking_id)
+            else:
+                self.signalr_publisher.publish_order_status(tracking_id, {
+                    "deliveryStage": delivery_stage,
+                    "status": order.get("status", "active")
+                })
 
         return updated
+
+    def complete_order(self, order_id: str) -> Optional[Dict[str, Any]]:
+        return self.update_delivery_stage(order_id, "completed")

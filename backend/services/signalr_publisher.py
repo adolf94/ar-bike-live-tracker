@@ -101,6 +101,10 @@ class SignalRPublisher:
         group_name = f"order-{tracking_id}"
         return self.broadcast_to_group(group_name, "locationUpdate", [location_data], only_if_connected=only_if_connected)
 
+    def publish_order_status(self, tracking_id: str, status_data: Dict[str, Any]) -> bool:
+        group_name = f"order-{tracking_id}"
+        return self.broadcast_to_group(group_name, "statusUpdate", [status_data], only_if_connected=False)
+
     def publish_order_completed(self, tracking_id: str) -> bool:
         group_name = f"order-{tracking_id}"
         return self.broadcast_to_group(group_name, "orderCompleted", [], only_if_connected=False)

@@ -27,6 +27,7 @@ export interface OrderData {
   recipient_name?: string;
   item_description?: string;
   status: 'active' | 'completed' | 'cancelled';
+  delivery_stage?: 'going_to_pickup' | 'going_to_dropoff' | 'completed';
   created_at: string;
   last_location?: OrderLocation | null;
 }
@@ -80,6 +81,13 @@ export const hatidkuyaApi = {
     const res = await api.post(`/api/orders/${orderId}/location`, {
       lat,
       lng,
+    });
+    return res.data;
+  },
+
+  async updateDeliveryStage(orderId: string, stage: 'going_to_pickup' | 'going_to_dropoff' | 'completed'): Promise<OrderData> {
+    const res = await api.post(`/api/orders/${orderId}/stage`, {
+      stage,
     });
     return res.data;
   },

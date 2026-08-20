@@ -215,12 +215,24 @@ export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) 
     addLog('Stopped manual GPS simulation.');
   };
 
+  const handleSetStage = async (stage: 'going_to_pickup' | 'going_to_dropoff') => {
+    if (!order?.id) return;
+    try {
+      await hatidkuyaApi.updateDeliveryStage(order.id, stage);
+      setOrder((prev) => (prev ? { ...prev, delivery_stage: stage } : null));
+      const label = stage === 'going_to_pickup' ? 'Going to Pickup' : 'Going to Dropoff';
+      addLog(`Status updated: ${label}`);
+    } catch (err: any) {
+      alert(`Failed to update delivery stage: ${err.message}`);
+    }
+  };
+
   const handleCompleteOrder = async () => {
     stopStreaming();
     if (!order?.id) return;
     try {
       await hatidkuyaApi.completeOrder(order.id);
-      setOrder((prev) => (prev ? { ...prev, status: 'completed' } : null));
+      setOrder((prev) => (prev ? { ...prev, status: 'completed', delivery_stage: 'completed' } : null));
       addLog('Delivery successfully completed!');
     } catch (err: any) {
       alert(`Failed to complete order: ${err.message}`);
@@ -544,30 +556,62 @@ export function RiderConsole({ onOpenTrack, liveTelemetry }: RiderConsoleProps) 
                 )}
               </div>
 
-              {/* Action Buttons */}
-              {order.status !== 'completed' ? (
-                <div className="flex gap-2.5">
-                  <button
-                    onClick={toggleStreaming}
-                    className={`flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm flex items-center justify-center gap-2 transition-all shadow-lg cursor-pointer ${
-                      isStreaming
-                        ? 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/30'
-                        : 'bg-emerald-600 hover:bg-emerald-500 text-white shadow-emerald-600/30'
-                    }`}
-                  >
-                    {isStreaming ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-                    {isStreaming ? 'Pause GPS Broadcast' : 'Start GPS Broadcast'}
-                  </button>
+              {/* Delivery Stage Controls */}
+              {order.status !== 'completed' && (
+                <div className="flex flex-col gap-2">
+                  <div className="grid grid-cols-2 gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800/80">
+                    <button
+                      type="button"
+                      onClick={() => handleSetStage('going_to_pickup')}
+                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        (order.delivery_stage || 'going_to_pickup') === 'going_to_pickup'
+                          ? 'bg-[#ff6b00] text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      To Pickup
+                    </button>
 
-                  <button
-                    onClick={handleCompleteOrder}
-                    className="flex-1 py-3 px-4 rounded-2xl font-bold text-xs sm:text-sm bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/30 cursor-pointer"
-                  >
-                    <CheckCircle2 className="w-4 h-4" />
-                    Complete Delivery
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => handleSetStage('going_to_dropoff')}
+                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                        order.delivery_stage === 'going_to_dropoff'
+                          ? 'bg-[#ff6b00] text-white shadow-sm'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                      To Drop-off
+                    </button>
+                  </div>
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={toggleStreaming}
+                      className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer ${
+                        isStreaming
+                          ? 'bg-rose-600/20 border border-rose-500/40 text-rose-300'
+                          : 'bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
+                      }`}
+                    >
+                      {isStreaming ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                      {isStreaming ? 'Pause GPS' : 'Simulate GPS'}
+                    </button>
+
+                    <button
+                      onClick={handleCompleteOrder}
+                      className="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5" />
+                      Complete Delivery
+                    </button>
+                  </div>
                 </div>
-              ) : (
+              )}
+
+              {order.status === 'completed' && (
                 <div className="flex items-center justify-between gap-3 bg-emerald-950/40 border border-emerald-800/40 p-3 rounded-2xl">
                   <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
                     <CheckCircle2 className="w-4 h-4" /> Delivery Completed

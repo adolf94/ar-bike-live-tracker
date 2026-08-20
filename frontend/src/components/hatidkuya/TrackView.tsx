@@ -148,6 +148,17 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     return null;
   }, [order?.from_coords?.lat, order?.from_coords?.lng]);
 
+  const stage = order?.delivery_stage || 'going_to_pickup';
+  const isGoingToPickup = stage === 'going_to_pickup';
+
+  // If going to pickup, active target is pickup coordinates; otherwise drop-off destination
+  const activeTargetLocation: [number, number] = useMemo(() => {
+    if (isGoingToPickup && sourceLocation) {
+      return sourceLocation;
+    }
+    return destLocation;
+  }, [isGoingToPickup, sourceLocation, destLocation]);
+
   const updateRiderPos = (lat: number, lng: number, timestamp?: string) => {
     setRiderLocation({ lat, lng, timestamp });
     setPathHistory((prev) => {
@@ -176,9 +187,12 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
       }
 
       if (history.status === 'fulfilled' && Array.isArray(history.value) && history.value.length > 0) {
-        const historyCoords: [number, number][] = history.value.map((pt) => [pt.lat, pt.lng]);
+        const sortedHistory = [...history.value].sort(
+          (a, b) => new Date(a.timestamp || 0).getTime() - new Date(b.timestamp || 0).getTime()
+        );
+        const historyCoords: [number, number][] = sortedHistory.map((pt) => [pt.lat, pt.lng]);
         setPathHistory(historyCoords);
-        const lastPt = history.value[history.value.length - 1];
+        const lastPt = sortedHistory[sortedHistory.length - 1];
         if (lastPt) {
           setRiderLocation({ lat: lastPt.lat, lng: lastPt.lng, timestamp: lastPt.timestamp });
           setLastPingTime(lastPt.timestamp);
@@ -219,15 +233,29 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
     onLocationUpdate: (loc) => {
       updateRiderPos(loc.lat, loc.lng, loc.timestamp);
     },
+    onStatusUpdate: (statusData) => {
+      setOrder((prev) => {
+        if (!prev) return prev;
+        const newStage = statusData.deliveryStage || (statusData as any).delivery_stage || prev.delivery_stage;
+        const newStatus = statusData.status || prev.status;
+        return {
+          ...prev,
+          status: newStatus as any,
+          delivery_stage: newStage as any,
+        };
+      });
+    },
     onOrderCompleted: () => {
-      setOrder((prev) => (prev ? { ...prev, status: 'completed' } : null));
+      setOrder((prev) => (prev ? { ...prev, status: 'completed', delivery_stage: 'completed' } : null));
       setError('This order has been completed.');
     },
   });
 
-  // Fallback HTTP Polling (Runs only if SignalR is disconnected)
+  // Fallback HTTP Polling (Runs ONLY as fallback when SignalR is disconnected or fails)
   useEffect(() => {
-    if (!trackingId || order?.status === 'completed' || error || isConnected) return;
+    if (!trackingId || order?.status === 'completed' || error || isConnected) {
+      return;
+    }
     const interval = setInterval(async () => {
       try {
         const data = await hatidkuyaApi.getOrder(trackingId);
@@ -236,11 +264,11 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
           setError('This order has been completed.');
           return;
         }
-        if (data.last_location) {
-          updateRiderPos(data.last_location.lat, data.last_location.lng, data.last_location.timestamp);
-        }
-        if (data.status) {
-          setOrder((prev) => (prev ? { ...prev, status: data.status } : data));
+        if (data) {
+          setOrder(data);
+          if (data.last_location) {
+            updateRiderPos(data.last_location.lat, data.last_location.lng, data.last_location.timestamp);
+          }
         }
       } catch (e: any) {
         if (e.response?.status === 404) {
@@ -304,18 +332,13 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
 
   const isCompleted = order?.status === 'completed';
   const riderPos: [number, number] = riderLocation ? [riderLocation.lat, riderLocation.lng] : defaultCenter;
+
   const distanceKm = riderLocation
-    ? getDistanceKm(riderLocation.lat, riderLocation.lng, destLocation[0], destLocation[1])
+    ? getDistanceKm(riderLocation.lat, riderLocation.lng, activeTargetLocation[0], activeTargetLocation[1])
     : null;
 
   // Estimated travel time calculation: assuming 25 km/h urban motorcycle speed
-  const estMins = distanceKm ? Math.max(3, Math.round((Number(distanceKm) / 15) * 60)) : null;
-
-  const activeBounds: [number, number][] = [
-    riderPos,
-    destLocation,
-    ...(sourceLocation ? [sourceLocation] : [])
-  ];
+  const estMins = distanceKm ? Math.max(2, Math.round((Number(distanceKm) / 25) * 60)) : null;
 
   return (
     <div className="flex-1 flex flex-col h-full relative w-full overflow-hidden bg-slate-950">
@@ -347,12 +370,12 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
             />
           )}
 
-          {/* Remaining Path to Destination */}
+          {/* Remaining Path to Active Target (Pickup or Dropoff) */}
           {!isCompleted && (
             <Polyline
-              positions={[riderPos, destLocation]}
+              positions={[riderPos, activeTargetLocation]}
               pathOptions={{
-                color: '#f59e0b',
+                color: isGoingToPickup ? '#10b981' : '#f59e0b',
                 weight: 3.5,
                 opacity: 0.85,
                 dashArray: '8, 8',
@@ -455,10 +478,21 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
 
               <div>
                 <span className="text-[11px] font-bold uppercase tracking-wider text-[#ff6b00] flex items-center gap-1">
-                  <Bike className="w-3.5 h-3.5" /> Kuya AR is on the way
+                  <Bike className="w-3.5 h-3.5" />
+                  {isCompleted
+                    ? 'Delivery Completed'
+                    : isGoingToPickup
+                    ? 'Kuya AR is heading to pickup'
+                    : 'Kuya AR is heading to drop-off'}
                 </span>
                 <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight mt-0.5">
-                  {estMins ? `Arriving in ~${estMins} mins` : 'Delivering package'}
+                  {isCompleted
+                    ? 'Package Delivered'
+                    : estMins
+                    ? `Arriving in ~${estMins} mins`
+                    : isGoingToPickup
+                    ? 'Heading to Pickup Point'
+                    : 'Delivering Package'}
                 </h3>
               </div>
             </div>
@@ -476,9 +510,11 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
                 <MessageSquare className="w-4 h-4" />
               </a>
 
-              {distanceKm && (
+              {distanceKm && !isCompleted && (
                 <div className="text-right bg-orange-50 px-2 py-1 rounded-xl border border-orange-200/60 hidden xs:block">
-                  <span className="text-[9px] uppercase font-bold text-slate-500 block leading-none">Distance</span>
+                  <span className="text-[9px] uppercase font-bold text-slate-500 block leading-none">
+                    {isGoingToPickup ? 'To Pickup' : 'To Drop-off'}
+                  </span>
                   <span className="text-xs font-extrabold text-[#ff6b00] font-mono leading-none">{distanceKm} km</span>
                 </div>
               )}
@@ -506,16 +542,16 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
                   <span className="text-[10px] font-bold text-slate-800">Matched</span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <div className="w-full h-1.5 rounded-full bg-[#ff6b00]" />
-                  <span className="text-[10px] font-bold text-slate-800">Pickup</span>
+                  <div className={`w-full h-1.5 rounded-full ${isGoingToPickup ? 'bg-[#ff6b00] animate-pulse' : 'bg-[#ff6b00]'}`} />
+                  <span className={`text-[10px] font-bold ${isGoingToPickup ? 'text-[#ff6b00]' : 'text-slate-800'}`}>Pickup</span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <div className="w-full h-1.5 rounded-full bg-[#ff6b00] animate-pulse" />
-                  <span className="text-[10px] font-bold text-[#ff6b00]">Delivering</span>
+                  <div className={`w-full h-1.5 rounded-full ${!isGoingToPickup && !isCompleted ? 'bg-[#ff6b00] animate-pulse' : isCompleted ? 'bg-[#ff6b00]' : 'bg-slate-200'}`} />
+                  <span className={`text-[10px] font-bold ${!isGoingToPickup && !isCompleted ? 'text-[#ff6b00]' : isCompleted ? 'text-slate-800' : 'text-slate-400'}`}>Drop-off</span>
                 </div>
                 <div className="flex flex-col items-center gap-1">
-                  <div className="w-full h-1.5 rounded-full bg-slate-200" />
-                  <span className="text-[10px] font-bold text-slate-400">Completed</span>
+                  <div className={`w-full h-1.5 rounded-full ${isCompleted ? 'bg-[#ff6b00]' : 'bg-slate-200'}`} />
+                  <span className={`text-[10px] font-bold ${isCompleted ? 'text-[#ff6b00]' : 'text-slate-400'}`}>Completed</span>
                 </div>
               </div>
 

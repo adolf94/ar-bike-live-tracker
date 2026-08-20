@@ -27,6 +27,11 @@ class UpdateLocationRequest(BaseModel):
     lng: float
 
 
+class UpdateStatusRequest(BaseModel):
+    status: Optional[str] = None  # "active" | "completed" | "cancelled"
+    delivery_stage: Optional[str] = None  # "going_to_pickup" | "going_to_dropoff" | "completed"
+
+
 class Order(BaseModel):
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     tracking_id: str = Field(default_factory=lambda: secrets.token_urlsafe(6).replace("-", "").replace("_", "")[:8].lower())
@@ -37,6 +42,7 @@ class Order(BaseModel):
     recipient_name: Optional[str] = None
     item_description: Optional[str] = None
     status: str = "active"  # "active" | "completed" | "cancelled"
+    delivery_stage: str = "going_to_pickup"  # "going_to_pickup" | "going_to_dropoff" | "completed"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     last_location: Optional[Location] = None
 
