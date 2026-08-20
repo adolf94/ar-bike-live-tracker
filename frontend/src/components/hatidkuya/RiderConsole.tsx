@@ -5,7 +5,7 @@ import 'leaflet/dist/leaflet.css';
 import { hatidkuyaApi } from '../../utils/hatidkuyaApi';
 import type { OrderData } from '../../utils/hatidkuyaApi';
 import { LocationSearchInput } from './LocationSearchInput';
-import { Navigation, Send, CheckCircle2, Copy, Check, Play, Square, ExternalLink } from 'lucide-react';
+import { Send, CheckCircle2, Copy, Check, Play, Square, ExternalLink } from 'lucide-react';
 
 function createRiderIcon() {
   return L.divIcon({
@@ -335,34 +335,24 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
             </MapContainer>
           </div>
 
-          {/* Floating Top Header */}
-          <div className="relative z-10 p-4 pointer-events-none flex justify-between items-start">
-            <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 py-2 px-4 rounded-2xl shadow-xl pointer-events-auto flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center">
-                <Navigation className="w-4 h-4 text-emerald-400" />
-              </div>
-              <div>
-                <h1 className="text-sm font-bold text-white leading-tight">HatidKuya Courier</h1>
-                <p className="text-[11px] text-slate-400">Rider Dispatch & GPS Broadcaster</p>
-              </div>
-            </div>
-
-            <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 py-1.5 px-3 rounded-2xl shadow-xl pointer-events-auto flex items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 ring-2 ring-emerald-500/30" /> Pickup
+          {/* Top Floating Map Legend (Minimal, Compact) */}
+          <div className="relative z-10 p-3 pointer-events-none flex justify-end items-center">
+            <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 py-1 px-2.5 rounded-xl shadow-xl pointer-events-auto flex items-center gap-2.5 text-[11px]">
+              <span className="flex items-center gap-1 text-emerald-400 font-medium">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" /> Pickup
               </span>
-              <span className="flex items-center gap-1.5 text-rose-400 font-semibold">
-                <span className="w-2.5 h-2.5 rounded-full bg-rose-400 ring-2 ring-rose-500/30" /> Drop-off
+              <span className="flex items-center gap-1 text-rose-400 font-medium">
+                <span className="w-2 h-2 rounded-full bg-rose-400" /> Drop-off
               </span>
             </div>
           </div>
 
-          {/* Floating Bottom Drawer Card (Grab/Uber style) */}
-          <div className="relative z-10 mt-auto p-3 sm:p-5 pointer-events-none">
-            <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-3xl p-5 md:p-6 shadow-2xl pointer-events-auto max-w-xl mx-auto">
-              <form onSubmit={handleCreateOrder} className="flex flex-col gap-3">
+          {/* Floating Bottom Drawer Card (Compact Grab/Uber style) */}
+          <div className="relative z-10 mt-auto p-2.5 sm:p-4 pointer-events-none">
+            <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-2xl pointer-events-auto max-w-lg mx-auto">
+              <form onSubmit={handleCreateOrder} className="flex flex-col gap-2">
                 <LocationSearchInput
-                  label="Pickup (From)"
+                  label="Pickup"
                   placeholder="Enter pickup point..."
                   value={fromAddress}
                   onChange={setFromAddress}
@@ -374,7 +364,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                 />
 
                 <LocationSearchInput
-                  label="Drop-off (To)"
+                  label="Drop-off"
                   placeholder="Enter destination point..."
                   value={toAddress}
                   onChange={setToAddress}
@@ -384,30 +374,30 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                   }}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Recipient Name
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Recipient
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Maria Santos"
+                      placeholder="e.g. Maria"
                       value={recipientName}
                       onChange={(e) => setRecipientName(e.target.value)}
-                      className="bg-slate-950/80 border border-slate-800 focus:border-emerald-500/80 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
+                      className="bg-slate-950/80 border border-slate-800 focus:border-emerald-500/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
                     />
                   </div>
 
-                  <div className="flex flex-col gap-1">
-                    <label className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Items to Send
+                  <div className="flex flex-col gap-0.5">
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
+                      Items
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Documents, Food, Package"
+                      placeholder="e.g. Package"
                       value={itemDescription}
                       onChange={(e) => setItemDescription(e.target.value)}
-                      className="bg-slate-950/80 border border-slate-800 focus:border-emerald-500/80 rounded-xl px-3 py-2 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
+                      className="bg-slate-950/80 border border-slate-800 focus:border-emerald-500/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -415,9 +405,9 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full mt-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold py-3 px-6 rounded-2xl flex items-center justify-center gap-2.5 transition-all shadow-lg shadow-emerald-600/30 cursor-pointer text-sm"
+                  className="w-full mt-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 cursor-pointer text-xs sm:text-sm"
                 >
-                  <Send className="w-4 h-4" />
+                  <Send className="w-3.5 h-3.5" />
                   {loading ? 'Creating Trip...' : 'Create Order & Start Delivery'}
                 </button>
               </form>
@@ -502,76 +492,72 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
             </MapContainer>
           </div>
 
-          {/* Floating Top Nav: Status & Share Bar */}
-          <div className="relative z-10 p-3 sm:p-4 pointer-events-none flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2">
-            <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 py-2 px-4 rounded-2xl shadow-xl pointer-events-auto flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <span className={`w-3 h-3 rounded-full ${isStreaming ? 'bg-emerald-400 animate-ping' : 'bg-slate-500'}`} />
-                <span className="text-xs font-bold text-white tracking-wide uppercase">
-                  {order.status === 'completed' ? 'Completed' : isStreaming ? 'Broadcasting GPS' : 'GPS Paused'}
+          {/* Floating Top Nav: Single Ultra-Compact Combined Status & Share Pill */}
+          <div className="relative z-10 p-2.5 sm:p-3 pointer-events-none flex justify-center items-center">
+            <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/70 p-1.5 rounded-2xl shadow-2xl pointer-events-auto flex items-center justify-between gap-2 max-w-lg w-full">
+              {/* Left Status Pill */}
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-slate-800/80 shrink-0">
+                <span className={`w-2 h-2 rounded-full ${isStreaming ? 'bg-emerald-400 animate-ping' : 'bg-slate-400'}`} />
+                <span className="text-[11px] font-bold text-white uppercase tracking-wider">
+                  {order.status === 'completed' ? 'Done' : isStreaming ? 'Live GPS' : 'Paused'}
+                </span>
+                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-bold ml-0.5">
+                  #{order.tracking_id}
                 </span>
               </div>
-              <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-md border border-emerald-500/20">
-                {order.tracking_id}
-              </span>
-            </div>
 
-            {/* Quick Share Link */}
-            <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 p-1.5 rounded-2xl shadow-xl pointer-events-auto flex items-center gap-1.5">
-              <input
-                type="text"
-                readOnly
-                value={trackingFullUrl}
-                className="bg-slate-950/80 text-emerald-400 font-mono text-[11px] px-3 py-1.5 rounded-xl border border-slate-800/80 w-36 sm:w-48 truncate"
-              />
-              <button
-                onClick={copyTrackingLink}
-                className="bg-slate-800 hover:bg-slate-700 text-white text-xs font-semibold px-3 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer"
-              >
-                {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied' : 'Share'}
-              </button>
-              <a
-                href={trackingFullUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center"
-                title="View Recipient Screen (Opens in new tab)"
-              >
-                <ExternalLink className="w-4 h-4" />
-              </a>
+              {/* Right Share Actions */}
+              <div className="flex items-center gap-1 min-w-0">
+                <button
+                  onClick={copyTrackingLink}
+                  className="bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                  title="Copy Tracking Message"
+                >
+                  {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                  <span>{copied ? 'Copied' : 'Share'}</span>
+                </button>
+                <a
+                  href={trackingFullUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center border border-emerald-500/30"
+                  title="Open Recipient View (New Tab)"
+                >
+                  <ExternalLink className="w-3.5 h-3.5" />
+                </a>
+              </div>
             </div>
           </div>
 
-          {/* Floating Bottom Drawer Controls */}
-          <div className="relative z-10 mt-auto p-3 sm:p-5 pointer-events-none">
-            <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-3xl p-4 sm:p-5 shadow-2xl pointer-events-auto max-w-xl mx-auto flex flex-col gap-3">
+          {/* Floating Bottom Drawer Controls (Compact) */}
+          <div className="relative z-10 mt-auto p-2.5 sm:p-4 pointer-events-none">
+            <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl pointer-events-auto max-w-lg mx-auto flex flex-col gap-2">
               {/* Trip Points & Package Details */}
-              <div className="grid grid-cols-2 gap-2 bg-slate-950/60 p-3 rounded-2xl border border-slate-800/60 text-xs">
-                <div>
+              <div className="grid grid-cols-2 gap-1.5 bg-slate-950/70 p-2.5 rounded-xl border border-slate-800/80 text-[11px]">
+                <div className="min-w-0">
                   <div className="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" /> Pickup
                   </div>
                   <div className="text-slate-200 font-semibold truncate mt-0.5">{order.from_address}</div>
                 </div>
-                <div>
+                <div className="min-w-0">
                   <div className="text-[10px] uppercase font-bold text-rose-400 flex items-center gap-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-rose-400" /> Drop-off
                   </div>
                   <div className="text-slate-200 font-semibold truncate mt-0.5">{order.to_address}</div>
                 </div>
                 {(order.recipient_name || order.item_description) && (
-                  <div className="col-span-2 pt-2 border-t border-slate-800/60 grid grid-cols-2 gap-2">
+                  <div className="col-span-2 pt-1.5 border-t border-slate-800/60 grid grid-cols-2 gap-1.5">
                     {order.recipient_name && (
-                      <div>
-                        <div className="text-[10px] uppercase font-bold text-slate-500">Recipient</div>
-                        <div className="text-slate-300 font-medium truncate">{order.recipient_name}</div>
+                      <div className="truncate">
+                        <span className="text-[9px] uppercase font-bold text-slate-500 mr-1">Recipient:</span>
+                        <span className="text-slate-300 font-medium">{order.recipient_name}</span>
                       </div>
                     )}
                     {order.item_description && (
-                      <div>
-                        <div className="text-[10px] uppercase font-bold text-slate-500">Items</div>
-                        <div className="text-slate-300 font-medium truncate">{order.item_description}</div>
+                      <div className="truncate">
+                        <span className="text-[9px] uppercase font-bold text-slate-500 mr-1">Items:</span>
+                        <span className="text-slate-300 font-medium">{order.item_description}</span>
                       </div>
                     )}
                   </div>
@@ -580,51 +566,62 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
 
               {/* Delivery Stage Controls */}
               {order.status !== 'completed' && (
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-1.5">
                   <div className="grid grid-cols-2 gap-1 bg-slate-950/90 p-1 rounded-xl border border-slate-800/80">
                     <button
                       type="button"
                       onClick={() => handleSetStage('going_to_pickup')}
-                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer ${
                         (order.delivery_stage || 'going_to_pickup') === 'going_to_pickup'
                           ? 'bg-[#ff6b00] text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
                       To Pickup
                     </button>
-
                     <button
                       type="button"
                       onClick={() => handleSetStage('going_to_dropoff')}
-                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1.5 transition-all cursor-pointer ${
+                      className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer ${
                         order.delivery_stage === 'going_to_dropoff'
                           ? 'bg-[#ff6b00] text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400 shrink-0" />
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
                       To Drop-off
                     </button>
                   </div>
 
+                  {/* Primary Action Buttons */}
                   <div className="flex gap-2">
                     <button
+                      type="button"
                       onClick={toggleStreaming}
-                      className={`flex-1 py-2.5 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer ${
+                      className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer ${
                         isStreaming
-                          ? 'bg-rose-600/20 border border-rose-500/40 text-rose-300'
-                          : 'bg-emerald-600/20 border border-emerald-500/40 text-emerald-300'
+                          ? 'bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30'
+                          : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
                       }`}
                     >
-                      {isStreaming ? <Square className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
-                      {isStreaming ? 'Pause GPS' : 'Simulate GPS'}
+                      {isStreaming ? (
+                        <>
+                          <Square className="w-3.5 h-3.5 fill-current" />
+                          Pause GPS
+                        </>
+                      ) : (
+                        <>
+                          <Play className="w-3.5 h-3.5 fill-current" />
+                          Simulate GPS
+                        </>
+                      )}
                     </button>
 
                     <button
+                      type="button"
                       onClick={handleCompleteOrder}
-                      className="flex-1 py-2.5 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all shadow-lg shadow-emerald-600/20 cursor-pointer"
+                      className="flex-1 py-2 px-3 rounded-xl font-bold text-xs bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
                     >
                       <CheckCircle2 className="w-3.5 h-3.5" />
                       Complete Delivery
