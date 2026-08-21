@@ -126,7 +126,7 @@ def _get_cloud_messaging() -> CloudMessagingService:
 
 
 @app.timer_trigger(
-    schedule="*/20 * * * * *",
+    schedule="0 */1 * * * *",
     arg_name="mytimer",
     run_on_startup=False,
 )

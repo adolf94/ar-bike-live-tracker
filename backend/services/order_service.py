@@ -110,14 +110,14 @@ class OrderService:
                     if (now_utc - last_broadcast).total_seconds() < 55:
                         continue
 
-                # If order is receiving active manual GPS stream within the last 90 seconds (Option A), prioritize it!
+                # If order is receiving active manual GPS stream within the last 125 seconds, prioritize it!
                 last_loc = order.get("last_location")
                 if last_loc and last_loc.get("source") == "manual_gps":
                     last_ts_str = last_loc.get("timestamp")
                     if last_ts_str:
                         try:
                             last_ts = datetime.fromisoformat(last_ts_str.replace("Z", "+00:00"))
-                            if (now_utc - last_ts).total_seconds() < 90:
+                            if (now_utc - last_ts).total_seconds() < 125:
                                 # Skip overwriting active manual GPS broadcast
                                 continue
                         except Exception:

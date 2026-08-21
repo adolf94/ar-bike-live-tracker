@@ -8,10 +8,12 @@
       }
     },
     "logLevel": {
-      "default": "Information",
-      "Host.Results": "Error",
+      "default": "Warning",
       "Function": "Information",
-      "Host.Aggregator": "Trace"
+      "Host.Results": "Error",
+      "Host.Aggregator": "None",
+      "Host.Bindings.CosmosDB": "Warning",
+      "Microsoft.Azure.Cosmos": "Warning"
     }
   },
   "extensionBundle": {
