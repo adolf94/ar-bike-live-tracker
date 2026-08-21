@@ -83,12 +83,13 @@ class SignalRPublisher:
         except Exception:
             return True
 
-    def broadcast_to_group(self, group_name: str, target: str, arguments: list, only_if_connected: bool = True) -> bool:
+    def broadcast_to_group(self, group_name: str, target: str, arguments: list, only_if_connected: bool = False) -> bool:
         if only_if_connected and not self.check_group_has_users(group_name):
             logger.debug("Skipping broadcast to group %s — no active subscribers", group_name)
             return False
 
-        url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}/groups/{group_name}/:send"
+        # Azure SignalR Service REST API group broadcast endpoint
+        url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}/groups/{group_name}"
         token = self.generate_token(url)
         headers = {
             "Content-Type": "application/json",
@@ -100,6 +101,11 @@ class SignalRPublisher:
         }
         try:
             resp = requests.post(url, json=body, headers=headers, timeout=5)
+            # 404 on /groups/{group_name} can happen if group does not exist yet; try /groups/{group_name}/:send or hub fallback
+            if resp.status_code == 404:
+                send_url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}/groups/{group_name}/:send"
+                send_token = self.generate_token(send_url)
+                resp = requests.post(send_url, json=body, headers={"Content-Type": "application/json", "Authorization": f"Bearer {send_token}"}, timeout=5)
             if resp.status_code not in (200, 202):
                 logger.warning("SignalR broadcast returned status %d: %s", resp.status_code, resp.text)
                 return False
@@ -108,11 +114,23 @@ class SignalRPublisher:
             logger.warning("SignalR broadcast failed (will not break request): %s", e)
             return False
 
-    def publish_location(self, tracking_id: str, location_data: Dict[str, Any], only_if_connected: bool = True) -> bool:
+    def publish_location(self, tracking_id: str, location_data: Dict[str, Any], only_if_connected: bool = False) -> bool:
         group_name = f"order-{tracking_id}"
         logger.info("publish_location → group=%s lat=%s lng=%s only_if_connected=%s",
                     group_name, location_data.get("lat"), location_data.get("lng"), only_if_connected)
-        return self.broadcast_to_group(group_name, "locationUpdate", [location_data], only_if_connected=only_if_connected)
+        res = self.broadcast_to_group(group_name, "locationUpdate", [location_data], only_if_connected=only_if_connected)
+
+        # Also broadcast to hub level with trackingId so all connected clients receive the update
+        url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}"
+        token = self.generate_token(url)
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+        body = {"target": "locationUpdate", "arguments": [{**location_data, "trackingId": tracking_id}]}
+        try:
+            requests.post(url, json=body, headers=headers, timeout=5)
+        except Exception as e:
+            logger.warning("Hub-level location broadcast failed: %s", e)
+
+        return res
 
     def publish_order_status(self, tracking_id: str, status_data: Dict[str, Any]) -> bool:
         group_name = f"order-{tracking_id}"
