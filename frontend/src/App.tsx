@@ -51,18 +51,6 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   const latestData = currentData || getCachedCurrent();
   const events = eventsData.length > 0 ? eventsData : (getCachedEvents() || []);
 
-  // Only initialize WebSocket subscriptions if authenticated
-  // WebSocket will update the TanStack Query cache directly
-  const { latestEvent, isSubscribed } = useWebPubSub(isAuthenticated ? getAccessToken : undefined);
-
-  // Combine errors
-  const apiError = currentError?.message || eventsError?.message || null;
-
-  // Manual refresh function
-  const handleManualRefresh = () => {
-    refreshAll();
-  };
-
   const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
   const [showTempPin, setShowTempPin] = useState(false);
 
@@ -91,6 +79,20 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   const [activeTab, setActiveTab] = useState<'telemetry' | 'hatidkuya'>(initialRoute.tab);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [trackedOrderId, setTrackedOrderId] = useState<string | null>(initialRoute.trackedId);
+
+  // Only initialize WebSocket subscriptions if authenticated AND on the telemetry tab
+  // WebSocket will update the TanStack Query cache directly
+  const { latestEvent, isSubscribed } = useWebPubSub(
+    isAuthenticated && activeTab === 'telemetry' && !trackedOrderId ? getAccessToken : undefined
+  );
+
+  // Combine errors
+  const apiError = currentError?.message || eventsError?.message || null;
+
+  // Manual refresh function
+  const handleManualRefresh = () => {
+    refreshAll();
+  };
 
   useEffect(() => {
     const handlePopState = () => {

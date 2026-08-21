@@ -53,13 +53,15 @@ export function useHatidKuyaSignalR(
           }
         });
 
-        connection.on('statusUpdate', (statusData: { deliveryStage?: string; status?: string }) => {
+        connection.on('statusUpdate', (statusData: any) => {
+          console.log('[SignalR useHatidKuyaSignalR] statusUpdate payload received:', statusData);
           if (onStatusUpdateRef.current) {
             onStatusUpdateRef.current(statusData);
           }
         });
 
         connection.on('orderCompleted', () => {
+          console.log('[SignalR useHatidKuyaSignalR] orderCompleted payload received');
           if (onOrderCompletedRef.current) {
             onOrderCompletedRef.current();
           }

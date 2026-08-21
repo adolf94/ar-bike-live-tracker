@@ -220,9 +220,10 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
       updateRiderPos(loc.lat, loc.lng, loc.timestamp);
     },
     onStatusUpdate: (statusData) => {
+      console.log('Received SignalR statusUpdate event:', statusData);
       setOrder((prev) => {
         if (!prev) return prev;
-        const newStage = statusData.deliveryStage || (statusData as any).delivery_stage || prev.delivery_stage;
+        const newStage = statusData.deliveryStage || (statusData as any).delivery_stage || (statusData as any).stage || prev.delivery_stage;
         const newStatus = statusData.status || prev.status;
         return {
           ...prev,

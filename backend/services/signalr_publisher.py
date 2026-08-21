@@ -103,9 +103,30 @@ class SignalRPublisher:
 
     def publish_order_status(self, tracking_id: str, status_data: Dict[str, Any]) -> bool:
         group_name = f"order-{tracking_id}"
-        return self.broadcast_to_group(group_name, "statusUpdate", [status_data], only_if_connected=False)
+        logger.info("Publishing statusUpdate to group %s: %s", group_name, status_data)
+        self.broadcast_to_group(group_name, "statusUpdate", [status_data], only_if_connected=False)
+        # Also broadcast to hub level with trackingId payload for global listeners
+        url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}"
+        token = self.generate_token(url)
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+        body = {"target": "statusUpdate", "arguments": [{**status_data, "trackingId": tracking_id}]}
+        try:
+            requests.post(url, json=body, headers=headers, timeout=5)
+        except Exception as e:
+            logger.warning("Hub-level status broadcast failed: %s", e)
+        return True
 
     def publish_order_completed(self, tracking_id: str) -> bool:
         group_name = f"order-{tracking_id}"
-        return self.broadcast_to_group(group_name, "orderCompleted", [], only_if_connected=False)
+        self.broadcast_to_group(group_name, "orderCompleted", [], only_if_connected=False)
+        # Also broadcast to hub level
+        url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}"
+        token = self.generate_token(url)
+        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {token}"}
+        body = {"target": "orderCompleted", "arguments": [{"trackingId": tracking_id}]}
+        try:
+            requests.post(url, json=body, headers=headers, timeout=5)
+        except Exception as e:
+            logger.warning("Hub-level orderCompleted broadcast failed: %s", e)
+        return True
 
