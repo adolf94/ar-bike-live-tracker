@@ -151,6 +151,48 @@ class AutomateService:
             logger.exception(f"Unexpected error sending Automate notification: {e}")
             return False
 
+    def send_hatidkuya_event_sync(
+        self,
+        event: str,
+        additional: Optional[Dict[str, Any]] = None,
+        priority: MessagePriority = MessagePriority.HIGH,
+    ) -> bool:
+        """Send HatidKuya custom event notification synchronously via requests."""
+        import requests
+        try:
+            payload_data: Dict[str, Any] = {
+                "event": event,
+            }
+            if additional:
+                payload_data.update(additional)
+
+            payload = {
+                "secret": self.secret,
+                "to": self.to_address,
+                "priority": priority.value,
+                "payload": payload_data,
+            }
+
+            if self.device:
+                payload["device"] = self.device
+
+            response = requests.post(
+                AUTOMATE_API_URL,
+                json=payload,
+                headers={"Content-Type": "application/json"},
+                timeout=10,
+            )
+
+            if response.status_code == 200:
+                logger.info(f"Automate HatidKuya event sent: {event} (priority: {priority.value})")
+                return True
+            else:
+                logger.error(f"Automate API error: status={response.status_code}, response={response.text[:200]}")
+                return False
+        except Exception as e:
+            logger.exception(f"Unexpected error sending Automate HatidKuya event synchronously: {e}")
+            return False
+
     async def send_hatidkuya_event(
         self,
         event: str,

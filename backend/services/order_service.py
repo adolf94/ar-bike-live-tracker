@@ -26,15 +26,11 @@ class OrderService:
         self._last_telemetry_broadcast: Dict[str, datetime] = {}
 
     def _trigger_automate_event(self, event_name: str, additional: Optional[Dict[str, Any]] = None) -> None:
-        """Trigger Automate notification in background task without blocking."""
+        """Trigger Automate notification synchronously."""
         if not self.automate_service:
             return
         try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                loop.create_task(self.automate_service.send_hatidkuya_event(event_name, additional))
-            else:
-                asyncio.run(self.automate_service.send_hatidkuya_event(event_name, additional))
+            self.automate_service.send_hatidkuya_event_sync(event_name, additional)
         except Exception as e:
             logger.warning("Error triggering Automate event %s: %s", event_name, e)
 
