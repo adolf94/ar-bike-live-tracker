@@ -7,11 +7,12 @@ interface UseHatidKuyaSignalROptions {
   onLocationUpdate?: (locationData: OrderLocation) => void;
   onStatusUpdate?: (statusData: { deliveryStage?: string; status?: string }) => void;
   onOrderCompleted?: () => void;
+  onReconnected?: (connectionId?: string | null) => void;
 }
 
 export function useHatidKuyaSignalR(
   trackingId: string | null | undefined,
-  { onLocationUpdate, onStatusUpdate, onOrderCompleted }: UseHatidKuyaSignalROptions
+  { onLocationUpdate, onStatusUpdate, onOrderCompleted, onReconnected }: UseHatidKuyaSignalROptions
 ) {
   const [isConnected, setIsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -25,6 +26,9 @@ export function useHatidKuyaSignalR(
 
   const onOrderCompletedRef = useRef(onOrderCompleted);
   onOrderCompletedRef.current = onOrderCompleted;
+
+  const onReconnectedRef = useRef(onReconnected);
+  onReconnectedRef.current = onReconnected;
 
   useEffect(() => {
     if (!trackingId) return;
@@ -46,6 +50,35 @@ export function useHatidKuyaSignalR(
           .withAutomaticReconnect()
           .configureLogging(signalR.LogLevel.Warning)
           .build();
+
+        connection.onreconnected((connectionId) => {
+          if (!isMounted) return;
+          setIsConnected(true);
+          setConnectionError(null);
+
+          const activeConnId = connectionId || connection.connectionId;
+          if (activeConnId && trackingId) {
+            hatidkuyaApi.joinGroup(trackingId, activeConnId).catch((err) => {
+              console.warn('[SignalR] joinGroup on reconnected failed (non-fatal):', err.message);
+            });
+          }
+
+          if (onReconnectedRef.current) {
+            onReconnectedRef.current(activeConnId);
+          }
+        });
+
+        connection.onreconnecting((err) => {
+          if (!isMounted) return;
+          setIsConnected(false);
+          if (err) setConnectionError(err.message);
+        });
+
+        connection.onclose((err) => {
+          if (!isMounted) return;
+          setIsConnected(false);
+          if (err) setConnectionError(err.message);
+        });
 
         connection.on('locationUpdate', (locationData: OrderLocation) => {
           if (onLocationUpdateRef.current) {

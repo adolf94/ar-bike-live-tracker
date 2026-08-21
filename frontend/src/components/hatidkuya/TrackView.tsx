@@ -236,6 +236,10 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
       setOrder((prev) => (prev ? { ...prev, status: 'completed', delivery_stage: 'completed' } : null));
       setError('This order has been completed.');
     },
+    onReconnected: () => {
+      console.log('[SignalR TrackView] Reconnected — refetching order and location history');
+      fetchOrder();
+    },
   });
 
   // Fallback HTTP Polling (Runs ONLY as fallback when SignalR is disconnected or fails)
