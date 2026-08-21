@@ -11,6 +11,8 @@ class OrderService:
         self.order_repo = order_repo or OrderRepository()
         self.signalr_publisher = signalr_publisher or SignalRPublisher()
         self.frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+        self._cached_active_order: Optional[Dict[str, Any]] = None
+        self._last_telemetry_broadcast: Dict[str, datetime] = {}
 
     def create_order(self, req: CreateOrderRequest, initial_location: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         from models.order import Location
@@ -41,6 +43,7 @@ class OrderService:
             last_location=initial_loc_model
         )
         saved = self.order_repo.create(order)
+        self._cached_active_order = saved
         tracking_id = saved["tracking_id"]
 
         # Seed initial location history point
@@ -69,10 +72,16 @@ class OrderService:
         }
 
     def get_order_by_tracking_id(self, tracking_id: str) -> Optional[Dict[str, Any]]:
+        if self._cached_active_order and self._cached_active_order.get("tracking_id") == tracking_id:
+            return self._cached_active_order
         return self.order_repo.get_by_tracking_id(tracking_id)
 
     def get_latest_active_order(self) -> Optional[Dict[str, Any]]:
-        return self.order_repo.get_latest_active_order()
+        if self._cached_active_order and self._cached_active_order.get("status") == "active":
+            return self._cached_active_order
+        order = self.order_repo.get_latest_active_order()
+        self._cached_active_order = order
+        return order
 
     def broadcast_telemetry_to_active_orders(self, lat: float, lng: float, timestamp: Optional[str] = None) -> int:
         """Broadcast live polled telemetry location to active delivery orders unless manual GPS stream is active."""
@@ -94,14 +103,21 @@ class OrderService:
         updated_count = 0
         for order in active_orders:
             try:
-                # If order is receiving active manual GPS stream within the last 15 seconds, prioritize it!
+                order_id = order.get("id")
+                # Debounce telemetry broadcast to 55 seconds per order
+                if order_id in self._last_telemetry_broadcast:
+                    last_broadcast = self._last_telemetry_broadcast[order_id]
+                    if (now_utc - last_broadcast).total_seconds() < 55:
+                        continue
+
+                # If order is receiving active manual GPS stream within the last 90 seconds (Option A), prioritize it!
                 last_loc = order.get("last_location")
                 if last_loc and last_loc.get("source") == "manual_gps":
                     last_ts_str = last_loc.get("timestamp")
                     if last_ts_str:
                         try:
                             last_ts = datetime.fromisoformat(last_ts_str.replace("Z", "+00:00"))
-                            if (now_utc - last_ts).total_seconds() < 15:
+                            if (now_utc - last_ts).total_seconds() < 90:
                                 # Skip overwriting active manual GPS broadcast
                                 continue
                         except Exception:
@@ -115,7 +131,7 @@ class OrderService:
                 if tracking_id:
                     # Save path history point in OrderLocationHistory container
                     self.order_repo.add_location_history(
-                        order_id=order.get("id"),
+                        order_id=order_id,
                         tracking_id=tracking_id,
                         lat=lat,
                         lng=lng,
@@ -123,6 +139,10 @@ class OrderService:
                     )
                     # Publish via SignalR only if subscribers are connected to order group
                     self.signalr_publisher.publish_location(tracking_id, loc_data, only_if_connected=True)
+
+                if order_id:
+                    self._last_telemetry_broadcast[order_id] = now_utc
+
                 updated_count += 1
             except Exception as e:
                 import logging
@@ -143,6 +163,9 @@ class OrderService:
         }
         order["last_location"] = loc_data
         updated = self.order_repo.update(order)
+
+        if self._cached_active_order and self._cached_active_order.get("id") == order_id:
+            self._cached_active_order["last_location"] = loc_data
 
         tracking_id = order.get("tracking_id")
         if tracking_id:
@@ -172,6 +195,12 @@ class OrderService:
             order["status"] = "completed"
 
         updated = self.order_repo.update(order)
+
+        if delivery_stage == "completed":
+            if self._cached_active_order and self._cached_active_order.get("id") == order_id:
+                self._cached_active_order = None
+        elif self._cached_active_order and self._cached_active_order.get("id") == order_id:
+            self._cached_active_order["delivery_stage"] = delivery_stage
 
         tracking_id = order.get("tracking_id")
         if tracking_id:

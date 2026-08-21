@@ -77,8 +77,17 @@ export const hatidkuyaApi = {
     return res.data;
   },
 
-  async updateLocation(orderId: string, lat: number, lng: number): Promise<OrderData> {
-    const res = await api.post(`/api/orders/${orderId}/location`, {
+  async updateLocation(orderIdOrLat: string | number, maybeLat?: number, maybeLng?: number): Promise<OrderData> {
+    let lat: number;
+    let lng: number;
+    if (typeof orderIdOrLat === 'number') {
+      lat = orderIdOrLat;
+      lng = maybeLat!;
+    } else {
+      lat = maybeLat!;
+      lng = maybeLng!;
+    }
+    const res = await api.post('/api/orders/location', {
       lat,
       lng,
     });

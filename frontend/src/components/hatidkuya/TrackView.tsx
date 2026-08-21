@@ -261,7 +261,7 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
           setError('This order does not exist.');
         }
       }
-    }, 15000);
+    }, 120000);
     return () => clearInterval(interval);
   }, [trackingId, order?.status, error, isConnected]);
 

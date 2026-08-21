@@ -326,9 +326,9 @@ async def poll_telemetry(
 #  HTTP TRIGGERS — REST API for frontend consumption
 # ====================================================================== #
 
-def _check_auth(req: func.HttpRequest) -> func.HttpResponse | None:
+def _check_auth(req: func.HttpRequest, required_scope: str | None = None) -> func.HttpResponse | None:
     try:
-        verify_token(req.headers.get("Authorization"))
+        verify_token(req.headers.get("Authorization"), required_scope=required_scope)
         return None
     except ValueError as e:
         return func.HttpResponse(
@@ -761,6 +761,9 @@ def _json_cors_response(data: any, status_code: int = 200) -> func.HttpResponse:
 async def create_order(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return _json_cors_response({}, 200)
+    auth_err = _check_auth(req)
+    if auth_err:
+        return auth_err
     try:
         from models.order import CreateOrderRequest
         body = req.get_json()
@@ -800,6 +803,9 @@ async def create_order(req: func.HttpRequest) -> func.HttpResponse:
 def get_active_order(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return _json_cors_response({}, 200)
+    auth_err = _check_auth(req)
+    if auth_err:
+        return auth_err
     try:
         active_order = _get_order_service().get_latest_active_order()
         return _json_cors_response(active_order, status_code=200)
@@ -849,19 +855,24 @@ async def get_order(req: func.HttpRequest) -> func.HttpResponse:
 
 
 @app.function_name("update_order_location")
-@app.route(route="orders/{orderId}/location", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
+@app.route(route="orders/location", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
 def update_order_location(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return _json_cors_response({}, 200)
-    order_id = req.route_params.get("orderId")
-    if not order_id:
-        return _json_cors_response({"error": "orderId is required"}, status_code=400)
+    auth_err = _check_auth(req, required_scope="api://bike-tracker-api/hatidkuya_location")
+    if auth_err:
+        return auth_err
 
     try:
         from models.order import UpdateLocationRequest
+        order_svc = _get_order_service()
+        active_order = order_svc.get_latest_active_order()
+        if not active_order:
+            return _json_cors_response({"error": "No active order found"}, status_code=404)
+
         body = req.get_json()
         loc_req = UpdateLocationRequest(**body)
-        updated = _get_order_service().update_location(order_id, loc_req)
+        updated = order_svc.update_location(active_order["id"], loc_req)
         if not updated:
             return _json_cors_response({"error": "Order not found"}, status_code=404)
         return _json_cors_response(updated, status_code=200)
@@ -875,6 +886,9 @@ def update_order_location(req: func.HttpRequest) -> func.HttpResponse:
 def update_order_stage(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return _json_cors_response({}, 200)
+    auth_err = _check_auth(req)
+    if auth_err:
+        return auth_err
     order_id = req.route_params.get("orderId")
     if not order_id:
         return _json_cors_response({"error": "orderId is required"}, status_code=400)
@@ -896,6 +910,9 @@ def update_order_stage(req: func.HttpRequest) -> func.HttpResponse:
 def complete_order(req: func.HttpRequest) -> func.HttpResponse:
     if req.method == "OPTIONS":
         return _json_cors_response({}, 200)
+    auth_err = _check_auth(req)
+    if auth_err:
+        return auth_err
     order_id = req.route_params.get("orderId")
     if not order_id:
         return _json_cors_response({"error": "orderId is required"}, status_code=400)

@@ -10,12 +10,13 @@ AUTHORITY = os.environ.get("OIDC_AUTHORITY", "https://auth.adolfrey.com/api")
 CLIENT_ID = os.environ.get("OIDC_CLIENT_ID", "")
 AUDIENCE = os.environ.get("OIDC_AUDIENCE", CLIENT_ID)
 JWKS_URI = f"{AUTHORITY}/.well-known/jwks.json"
-REQUIRED_SCOPE = os.environ.get("OIDC_REQUIRED_SCOPE", "api://bike-tracker-api/user")
+REQUIRED_SCOPES_CONFIG = os.environ.get("OIDC_REQUIRED_SCOPE", "api://bike-tracker-api/user")
+REQUIRED_SCOPES = [s.strip() for s in REQUIRED_SCOPES_CONFIG.replace(",", " ").split() if s.strip()]
 
 # PyJWKClient handles fetching and caching the keys automatically
 jwks_client = PyJWKClient(JWKS_URI)
 
-def verify_token(auth_header: str | None) -> dict:
+def verify_token(auth_header: str | None, required_scope: str | None = None) -> dict:
     """
     Verifies the JWT token from the Authorization header using the 
     JWKS provided by the authentication authority.
@@ -48,7 +49,7 @@ def verify_token(auth_header: str | None) -> dict:
 
         payload = jwt.decode(token, signing_key.key, **decode_kwargs)
 
-        # Verify the required scope is present
+        # Verify the required scopes are present
         scopes = payload.get("scp", payload.get("scope", ""))
         if isinstance(scopes, str):
             scopes_list = scopes.split()
@@ -57,8 +58,10 @@ def verify_token(auth_header: str | None) -> dict:
         else:
             scopes_list = []
             
-        if REQUIRED_SCOPE and REQUIRED_SCOPE not in scopes_list:
-            raise ValueError(f"Token is missing the required scope '{REQUIRED_SCOPE}'")
+        target_scopes = [required_scope] if required_scope else REQUIRED_SCOPES
+        for req_sc in target_scopes:
+            if req_sc and req_sc not in scopes_list:
+                raise ValueError(f"Token is missing the required scope '{req_sc}'")
 
         return payload
     except jwt.ExpiredSignatureError:

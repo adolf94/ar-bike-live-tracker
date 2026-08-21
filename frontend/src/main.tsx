@@ -26,7 +26,7 @@ function Main() {
     clientId: appConfig.VITE_OIDC_CLIENT_ID || import.meta.env.VITE_OIDC_CLIENT_ID || 'ar-bike-tracker-ui',
     audience: appConfig.VITE_OIDC_AUDIENCE || import.meta.env.VITE_OIDC_AUDIENCE || 'bike-tracker-api',
     redirectUri: appConfig.VITE_OIDC_REDIRECT_URI || import.meta.env.VITE_OIDC_REDIRECT_URI || window.location.origin + '/callback',
-    scope: appConfig.VITE_OIDC_SCOPE || import.meta.env.VITE_OIDC_SCOPE || 'openid profile email offline_access api://bike-tracker-api/user',
+    scope: appConfig.VITE_OIDC_SCOPE || import.meta.env.VITE_OIDC_SCOPE || 'openid profile email offline_access api://bike-tracker-api/user api://bike-tracker-api/hatidkuya_location',
     theme: theme
   };
 

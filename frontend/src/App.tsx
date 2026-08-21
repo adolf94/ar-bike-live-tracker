@@ -8,7 +8,7 @@ import { MapViewSkeleton } from './components/MapViewSkeleton';
 import { NotificationToast } from './components/NotificationToast';
 import { useWebPubSub } from './hooks/useWebPubSub';
 import { useCurrentTelemetry, useTelemetryEvents, useRefreshTelemetry, useCachedTelemetry } from './hooks/useTelemetryQueries';
-import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogIn, LogOut, RefreshCw, Send, Menu, X } from 'lucide-react';
+import { Bike, Activity, ServerCrash, Clock, Sun, Moon, LogOut, RefreshCw, Send, Menu, X } from 'lucide-react';
 import { DeviceControls } from './components/DeviceControls';
 import { setupAxiosAuth } from './utils/api';
 import { formatDisplayDate } from './utils/date';
@@ -28,16 +28,16 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   }, [isAuthenticated, getAccessToken, login]);
 
   // Use TanStack Query hooks for data fetching
-  const { 
-    data: currentData, 
-    isLoading: currentLoading, 
+  const {
+    data: currentData,
+    isLoading: currentLoading,
     isFetching: currentFetching,
     error: currentError,
   } = useCurrentTelemetry();
 
-  const { 
-    data: eventsData = [], 
-    isLoading: eventsLoading, 
+  const {
+    data: eventsData = [],
+    isLoading: eventsLoading,
     isFetching: eventsFetching,
     error: eventsError,
   } = useTelemetryEvents(40);
@@ -72,7 +72,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   const parseCurrentRoute = () => {
     const pathname = window.location.pathname;
     const urlParams = new URLSearchParams(window.location.search);
-    
+
     // Check path /track/:trackingId or query ?track=trackingId
     const trackMatch = pathname.match(/^\/track\/([^\/]+)/);
     if (trackMatch && trackMatch[1]) {
@@ -178,14 +178,57 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
           <div className="p-4 bg-primary/20 rounded-full text-primary mb-6">
             <Bike className="w-12 h-12" />
           </div>
-          <h1 className="text-2xl font-bold text-white mb-2">Antigravity Tracker</h1>
+          <h1 className="text-2xl font-bold text-white mb-2">Bike Tracker</h1>
           <p className="text-slate-400 mb-8">Secure access required to view real-time telemetry and control devices.</p>
           <button
             onClick={() => login()}
-            className="w-full flex items-center justify-center gap-2 bg-primary hover:bg-primary-hover text-white py-3 px-6 rounded-xl font-medium transition-colors"
+            className="w-full flex items-center justify-center gap-3 bg-gradient-to-r from-[#2563eb] to-[#8b5cf6] hover:from-[#1d4ed8] hover:to-[#7c3aed] text-white py-3.5 px-6 rounded-2xl font-bold text-base shadow-lg shadow-indigo-500/25 hover:shadow-indigo-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all cursor-pointer"
           >
-            <LogIn className="w-5 h-5" />
-            Sign In with AR ID
+            {/* Overlapping Identity Provider Badges */}
+            <div className="flex items-center -space-x-2 shrink-0">
+              {/* Google */}
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-md ring-2 ring-white/30 z-30">
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#EA4335"
+                    d="M12 5c1.6 0 3 .6 4.1 1.6l3.1-3.1C17.3 1.7 14.8 1 12 1 7.5 1 3.7 3.6 1.9 7.3l3.7 2.9C6.5 7.4 9 5 12 5z"
+                  />
+                  <path
+                    fill="#4285F4"
+                    d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.8-2.4 3.7l3.7 2.9c2.2-2 3.7-5 3.7-8.8z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.6 14.8c-.2-.7-.4-1.5-.4-2.3 0-.8.2-1.6.4-2.3L1.9 7.3C.7 9.7 0 12 0 14.5s.7 4.8 1.9 7.2l3.7-2.9z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23.5c3.2 0 6-1.1 8-3l-3.7-2.9c-1.1.7-2.5 1.2-4.3 1.2-3 0-5.5-2.4-6.4-5.2L1.9 16.5C3.7 20.2 7.5 23.5 12 23.5z"
+                  />
+                </svg>
+              </div>
+
+              {/* Telegram */}
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-md ring-2 ring-white/30 z-20">
+                <svg className="w-4 h-4 text-[#229ED9]" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z" />
+                </svg>
+              </div>
+
+              {/* Passkey / Fingerprint */}
+              <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center shadow-md ring-2 ring-white/30 z-10">
+                <svg className="w-4 h-4 text-slate-700" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M2 12C2 6.5 6.5 2 12 2a10 10 0 0 1 8 4" />
+                  <path d="M5 19.5C5.5 18 6 15 6 12a6 6 0 0 1 .34-2" />
+                  <path d="M8.65 22A8 8 0 0 1 9 12a3 3 0 0 1 3-3c2 0 3 1.5 3 3v2" />
+                  <path d="M14 8a4 4 0 0 1 4 4v3" />
+                  <path d="M17.5 19a9 9 0 0 0 .5-4v-3a6 6 0 0 0-6-6" />
+                  <path d="M12 12v3" />
+                </svg>
+              </div>
+            </div>
+
+            <span className="tracking-wide">Sign In</span>
           </button>
         </div>
       </div>
@@ -243,11 +286,10 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
                   navigateToTab('telemetry');
                   setIsMobileDrawerOpen(false);
                 }}
-                className={`w-full py-3 px-3.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-all cursor-pointer ${
-                  activeTab === 'telemetry'
+                className={`w-full py-3 px-3.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-all cursor-pointer ${activeTab === 'telemetry'
                     ? 'bg-primary text-white shadow-lg shadow-primary/30'
                     : 'text-slate-300 hover:bg-slate-800/80'
-                }`}
+                  }`}
               >
                 <Activity className="w-4 h-4" />
                 <div className="text-left">
@@ -261,11 +303,10 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
                   navigateToTab('hatidkuya');
                   setIsMobileDrawerOpen(false);
                 }}
-                className={`w-full py-3 px-3.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-all cursor-pointer ${
-                  activeTab === 'hatidkuya'
+                className={`w-full py-3 px-3.5 rounded-xl text-sm font-semibold flex items-center gap-3 transition-all cursor-pointer ${activeTab === 'hatidkuya'
                     ? 'bg-emerald-600 text-white shadow-lg shadow-emerald-600/30'
                     : 'text-slate-300 hover:bg-slate-800/80'
-                }`}
+                  }`}
               >
                 <Send className="w-4 h-4" />
                 <div className="text-left">
@@ -323,22 +364,20 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
           <nav className="hidden md:flex items-center bg-slate-900/80 p-1 rounded-xl border border-dark-border">
             <button
               onClick={() => navigateToTab('telemetry')}
-              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'telemetry'
+              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'telemetry'
                   ? 'bg-primary text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Activity className="w-3.5 h-3.5" />
               <span>Telemetry</span>
             </button>
             <button
               onClick={() => navigateToTab('hatidkuya')}
-              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${
-                activeTab === 'hatidkuya'
+              className={`px-3 py-1.5 rounded-lg text-xs md:text-sm font-semibold transition-all cursor-pointer flex items-center gap-1.5 ${activeTab === 'hatidkuya'
                   ? 'bg-emerald-600 text-white shadow-sm'
                   : 'text-slate-400 hover:text-slate-200'
-              }`}
+                }`}
             >
               <Send className="w-3.5 h-3.5" />
               <span>HatidKuya</span>
@@ -353,7 +392,7 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
               <ServerCrash className="w-3 h-3" /> <span className="hidden md:inline">{apiError}</span>
             </div>
           )}
-          
+
           {/* Refresh Button */}
           <button
             onClick={handleManualRefresh}
@@ -377,9 +416,9 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
           >
             {theme === 'light' ? <Moon className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" /> : <Sun className="w-3.5 h-3.5 sm:w-4 sm:h-4 md:w-5 md:h-5" />}
           </button>
-          
+
           <DeviceControls />
-          
+
           <button
             onClick={() => logout()}
             className="hidden sm:flex p-2 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
@@ -473,8 +512,8 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
         <PubSubDebugger
           latestData={latestData || null}
           isSubscribed={isSubscribed}
-          setEvents={() => {}}
-          setLatestData={() => {}}
+          setEvents={() => { }}
+          setLatestData={() => { }}
         />
       )}
     </div>
