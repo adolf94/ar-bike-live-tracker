@@ -1,0 +1,12 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/images/*.{png,jpg,gif,svg}", "/assets/*", "/appconfig.js", "/appconfig.json", "/manifest.webmanifest", "/favicon.svg", "/apple-touch-icon.png", "/pwa-192.png", "/pwa-512.png", "/sw.js", "/workbox-*.js"]
+  },
+  "responseOverrides": {
+    "404": {
+      "rewrite": "/index.html",
+      "statusCode": 200
+    }
+  }
+}

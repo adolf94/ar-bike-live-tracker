@@ -94,9 +94,9 @@ function getDistanceKm(lat1: number, lon1: number, lat2: number, lon2: number): 
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   const d = R * c;
   return d.toFixed(2);
@@ -474,7 +474,7 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
               {isMinimized && (
                 <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-[#ff6b00] border-2 border-white shadow-md shadow-orange-500/20 shrink-0 flex items-center justify-center">
                   <img
-                    src="/kuya.jpg"
+                    src="/images/kuya.jpg"
                     alt="Kuya AR"
                     className="w-full h-full object-cover"
                     onError={(e) => {
@@ -493,21 +493,21 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
                   {isCompleted
                     ? 'Delivery Completed'
                     : isGoingToPickup
-                    ? 'Kuya AR is heading to pickup'
-                    : 'Kuya AR is heading to drop-off'}
+                      ? 'Kuya AR is heading to pickup'
+                      : 'Kuya AR is heading to drop-off'}
                 </span>
                 <h3 className="text-sm sm:text-base font-extrabold text-slate-900 tracking-tight mt-0.5">
                   {isCompleted
                     ? 'Package Delivered'
                     : estMins
-                    ? `Arriving in ~${estMins} mins`
-                    : isGoingToPickup
-                    ? 'Heading to Pickup Point'
-                    : 'Delivering Package'}
+                      ? `Arriving in ~${estMins} mins`
+                      : isGoingToPickup
+                        ? 'Heading to Pickup Point'
+                        : 'Delivering Package'}
                 </h3>
               </div>
             </div>
-            
+
             <div className="flex items-center gap-1.5 sm:gap-2">
               {/* Quick Messenger link always accessible */}
               <a
@@ -571,7 +571,7 @@ export function TrackView({ trackingId, onBack }: TrackViewProps) {
                 <div className="flex items-center gap-3">
                   <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-[#ff6b00] border-2 border-white shadow-md shadow-orange-500/20 flex items-center justify-center">
                     <img
-                      src="/kuya.jpg"
+                      src="/images/kuya.jpg"
                       alt="Kuya AR"
                       className="w-full h-full object-cover"
                       onError={(e) => {
