@@ -286,7 +286,8 @@ async def poll_telemetry(
                     # Always use valid ISO-8601 UTC string for live tracking
                     now_iso = datetime.now(timezone.utc).isoformat()
                     timestamp_val = (
-                        getattr(final_doc, "status_updated_at", None)
+                        final_loc.get("position_time")
+                        or getattr(final_doc, "status_updated_at", None)
                         or getattr(final_doc, "last_checked_at", None)
                         or now_iso
                     )

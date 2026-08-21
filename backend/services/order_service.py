@@ -1,18 +1,42 @@
 import os
+import asyncio
+import logging
 from typing import Dict, Any, Optional
 from datetime import datetime, timezone
 from models.order import Order, CreateOrderRequest, UpdateLocationRequest
 from repositories.order_repository import OrderRepository
 from .signalr_publisher import SignalRPublisher
+from .automate_service import AutomateService
+
+logger = logging.getLogger(__name__)
 
 
 class OrderService:
-    def __init__(self, order_repo: Optional[OrderRepository] = None, signalr_publisher: Optional[SignalRPublisher] = None):
+    def __init__(
+        self,
+        order_repo: Optional[OrderRepository] = None,
+        signalr_publisher: Optional[SignalRPublisher] = None,
+        automate_service: Optional[AutomateService] = None,
+    ):
         self.order_repo = order_repo or OrderRepository()
         self.signalr_publisher = signalr_publisher or SignalRPublisher()
+        self.automate_service = automate_service or AutomateService.from_environment()
         self.frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:5173").rstrip("/")
         self._cached_active_order: Optional[Dict[str, Any]] = None
         self._last_telemetry_broadcast: Dict[str, datetime] = {}
+
+    def _trigger_automate_event(self, event_name: str, additional: Optional[Dict[str, Any]] = None) -> None:
+        """Trigger Automate notification in background task without blocking."""
+        if not self.automate_service:
+            return
+        try:
+            loop = asyncio.get_event_loop()
+            if loop.is_running():
+                loop.create_task(self.automate_service.send_hatidkuya_event(event_name, additional))
+            else:
+                asyncio.run(self.automate_service.send_hatidkuya_event(event_name, additional))
+        except Exception as e:
+            logger.warning("Error triggering Automate event %s: %s", event_name, e)
 
     def create_order(self, req: CreateOrderRequest, initial_location: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         from models.order import Location
@@ -56,7 +80,7 @@ class OrderService:
                 timestamp=initial_loc_model.timestamp
             )
 
-        return {
+        response_data = {
             "orderId": saved["id"],
             "trackingId": tracking_id,
             "trackingUrl": f"{self.frontend_url}/track/{tracking_id}",
@@ -70,6 +94,18 @@ class OrderService:
             "lastLocation": initial_loc_model.model_dump() if initial_loc_model else None,
             "createdAt": saved["created_at"]
         }
+
+        # Trigger Automate event for order start
+        self._trigger_automate_event("hatidkuya_start", {
+            "orderId": saved["id"],
+            "trackingId": tracking_id,
+            "recipientName": saved.get("recipient_name"),
+            "itemDescription": saved.get("item_description"),
+            "fromAddress": saved.get("from_address"),
+            "toAddress": saved.get("to_address"),
+        })
+
+        return response_data
 
     def get_order_by_tracking_id(self, tracking_id: str) -> Optional[Dict[str, Any]]:
         if self._cached_active_order and self._cached_active_order.get("tracking_id") == tracking_id:
@@ -93,10 +129,21 @@ class OrderService:
             return 0
 
         now_utc = datetime.now(timezone.utc)
+        polled_ts_str = timestamp or now_utc.isoformat()
+        
+        # Parse polled GPS timestamp
+        polled_ts = None
+        try:
+            polled_ts = datetime.fromisoformat(polled_ts_str.replace("Z", "+00:00"))
+            if polled_ts.tzinfo is None:
+                polled_ts = polled_ts.replace(tzinfo=timezone.utc)
+        except Exception:
+            polled_ts = now_utc
+
         loc_data = {
             "lat": lat,
             "lng": lng,
-            "timestamp": timestamp or now_utc.isoformat(),
+            "timestamp": polled_ts_str,
             "source": "poll_telemetry"
         }
 
@@ -104,24 +151,33 @@ class OrderService:
         for order in active_orders:
             try:
                 order_id = order.get("id")
-                # Debounce telemetry broadcast to 55 seconds per order
-                if order_id in self._last_telemetry_broadcast:
-                    last_broadcast = self._last_telemetry_broadcast[order_id]
-                    if (now_utc - last_broadcast).total_seconds() < 55:
+                last_loc = order.get("last_location")
+
+                # If most recent gps_time == last gps_time on order, do not send broadcast
+                if last_loc and last_loc.get("source") == "poll_telemetry":
+                    last_gps_time = last_loc.get("timestamp")
+                    if last_gps_time == polled_ts_str:
                         continue
 
-                # If order is receiving active manual GPS stream within the last 125 seconds, prioritize it!
-                last_loc = order.get("last_location")
+                # If last manual location time > polling gps_time, do not send broadcast
                 if last_loc and last_loc.get("source") == "manual_gps":
-                    last_ts_str = last_loc.get("timestamp")
-                    if last_ts_str:
+                    last_manual_ts_str = last_loc.get("timestamp")
+                    if last_manual_ts_str:
                         try:
-                            last_ts = datetime.fromisoformat(last_ts_str.replace("Z", "+00:00"))
-                            if (now_utc - last_ts).total_seconds() < 125:
-                                # Skip overwriting active manual GPS broadcast
+                            last_manual_ts = datetime.fromisoformat(last_manual_ts_str.replace("Z", "+00:00"))
+                            if last_manual_ts.tzinfo is None:
+                                last_manual_ts = last_manual_ts.replace(tzinfo=timezone.utc)
+                            
+                            if last_manual_ts > polled_ts:
                                 continue
                         except Exception:
                             pass
+
+                # Debounce telemetry broadcast per order if already polled recently with same or unneeded interval
+                if order_id in self._last_telemetry_broadcast:
+                    last_broadcast = self._last_telemetry_broadcast[order_id]
+                    if (now_utc - last_broadcast).total_seconds() < 10:
+                        continue
 
                 # Persist latest polled location to CosmosDB
                 order["last_location"] = loc_data
@@ -205,6 +261,13 @@ class OrderService:
         if tracking_id:
             if delivery_stage == "completed":
                 self.signalr_publisher.publish_order_completed(tracking_id)
+                self._trigger_automate_event("hatidkuya_end", {
+                    "orderId": order.get("id"),
+                    "trackingId": tracking_id,
+                    "status": "completed",
+                    "recipientName": order.get("recipient_name"),
+                    "itemDescription": order.get("item_description"),
+                })
             else:
                 self.signalr_publisher.publish_order_status(tracking_id, {
                     "deliveryStage": delivery_stage,

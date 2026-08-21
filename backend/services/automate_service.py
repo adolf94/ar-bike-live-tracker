@@ -3,9 +3,10 @@
 Sends notifications to Android devices via LlamaLabs Automate webhooks.
 """
 
+import os
 import logging
 import httpx
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 from datetime import datetime
 
 from models.documents import TelemetryDocument
@@ -39,6 +40,20 @@ class AutomateService:
             raise ValueError("Automate to_address cannot be empty")
         
         logger.info(f"AutomateService initialized for {self.to_address}")
+    
+    @classmethod
+    def from_environment(cls) -> Optional["AutomateService"]:
+        """Instantiate AutomateService from environment variables if enabled."""
+        enabled = os.environ.get("AUTOMATE_ENABLED", "false").lower() == "true" or os.environ.get("ENABLE_CLOUD_MESSAGING", "false").lower() == "true"
+        secret = os.environ.get("AUTOMATE_SECRET", "")
+        to_address = os.environ.get("AUTOMATE_TO", "")
+        device = os.environ.get("AUTOMATE_DEVICE", "")
+        if secret and to_address:
+            try:
+                return cls(secret=secret, to_address=to_address, device=device)
+            except Exception as e:
+                logger.warning(f"Failed to instantiate AutomateService from environment: {e}")
+        return None
     
     def _construct_payload(
         self,
@@ -108,13 +123,13 @@ class AutomateService:
                 )
                 
                 # Check response
-                if response.status_code == GaleError.GONE:
+                if response.status_code == 410:
                     # 410 Gone - likely means the Automate flow was deleted
-                    logger.error(f"Automate API returned 410 Gone. Flow may have been deleted.")
+                    logger.error("Automate API returned 410 Gone. Flow may have been deleted.")
                     return False
                 elif response.status_code == 401:
                     # 401 Unauthorized - invalid secret
-                    logger.error(f"Automate API returned 401 Unauthorized. Check secret key.")
+                    logger.error("Automate API returned 401 Unauthorized. Check secret key.")
                     return False
                 elif response.status_code == 200:
                     logger.info(f"Automate notification sent: {event_type.value} (priority: {priority.value})")
@@ -134,6 +149,73 @@ class AutomateService:
             return False
         except Exception as e:
             logger.exception(f"Unexpected error sending Automate notification: {e}")
+            return False
+
+    async def send_hatidkuya_event(
+        self,
+        event: str,
+        additional: Optional[Dict[str, Any]] = None,
+        priority: MessagePriority = MessagePriority.HIGH,
+    ) -> bool:
+        """Send HatidKuya custom event notification via Automate webhook.
+        
+        Args:
+            event: Event name/identifier (e.g. 'order_created', 'stage_updated')
+            additional: Additional context/metadata dictionary
+            priority: Message priority level (defaults to HIGH)
+            
+        Returns:
+            True if notification was sent successfully, False otherwise
+        """
+        try:
+            payload_data: Dict[str, Any] = {
+                "event": event,
+                "timestamp": datetime.now().isoformat(),
+            }
+            if additional:
+                payload_data.update(additional)
+
+            payload = {
+                "secret": self.secret,
+                "to": self.to_address,
+                "priority": priority.value,
+                "payload": payload_data,
+            }
+
+            if self.device:
+                payload["device"] = self.device
+
+            async with httpx.AsyncClient(timeout=30.0) as client:
+                response = await client.post(
+                    AUTOMATE_API_URL,
+                    json=payload,
+                    headers={"Content-Type": "application/json"}
+                )
+
+                if response.status_code == 410:
+                    logger.error("Automate API returned 410 Gone. Flow may have been deleted.")
+                    return False
+                elif response.status_code == 401:
+                    logger.error("Automate API returned 401 Unauthorized. Check secret key.")
+                    return False
+                elif response.status_code == 200:
+                    logger.info(f"Automate HatidKuya event sent: {event} (priority: {priority.value})")
+                    return True
+                else:
+                    logger.error(
+                        f"Automate API error: status={response.status_code}, "
+                        f"response={response.text[:200]}"
+                    )
+                    return False
+
+        except httpx.TimeoutException:
+            logger.error("Automate API timeout")
+            return False
+        except httpx.RequestError as e:
+            logger.error(f"Automate API request error: {e}")
+            return False
+        except Exception as e:
+            logger.exception(f"Unexpected error sending Automate HatidKuya event: {e}")
             return False
     
     async def send_test_notification(self) -> bool:
