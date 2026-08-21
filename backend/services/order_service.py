@@ -97,12 +97,8 @@ class OrderService:
 
         # Trigger Automate event for order start
         self._trigger_automate_event("hatidkuya_start", {
-            "orderId": saved["id"],
-            "trackingId": tracking_id,
-            "recipientName": saved.get("recipient_name"),
-            "itemDescription": saved.get("item_description"),
-            "fromAddress": saved.get("from_address"),
-            "toAddress": saved.get("to_address"),
+            "order_id": saved["id"],
+            "id": saved["id"],
         })
 
         return response_data
@@ -262,11 +258,8 @@ class OrderService:
             if delivery_stage == "completed":
                 self.signalr_publisher.publish_order_completed(tracking_id)
                 self._trigger_automate_event("hatidkuya_end", {
-                    "orderId": order.get("id"),
-                    "trackingId": tracking_id,
-                    "status": "completed",
-                    "recipientName": order.get("recipient_name"),
-                    "itemDescription": order.get("item_description"),
+                    "order_id": order.get("id"),
+                    "id": order.get("id"),
                 })
             else:
                 self.signalr_publisher.publish_order_status(tracking_id, {

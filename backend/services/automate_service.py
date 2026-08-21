@@ -170,7 +170,6 @@ class AutomateService:
         try:
             payload_data: Dict[str, Any] = {
                 "event": event,
-                "timestamp": datetime.now().isoformat(),
             }
             if additional:
                 payload_data.update(additional)
