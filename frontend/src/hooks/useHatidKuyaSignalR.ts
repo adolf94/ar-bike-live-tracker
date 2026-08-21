@@ -72,6 +72,13 @@ export function useHatidKuyaSignalR(
           connectionRef.current = connection;
           setIsConnected(true);
           setConnectionError(null);
+          // Tell the server to add this connection to the order group
+          // (required in Azure SignalR serverless mode — JWT group claims are not auto-applied)
+          if (connection.connectionId) {
+            hatidkuyaApi.joinGroup(trackingId!, connection.connectionId).catch((err) => {
+              console.warn('[SignalR] joinGroup failed (non-fatal):', err.message);
+            });
+          }
         }
       } catch (err: any) {
         if (isMounted) {

@@ -1086,6 +1086,32 @@ def negotiate_order_signalr(req: func.HttpRequest) -> func.HttpResponse:
         return _json_cors_response({"error": str(e)}, status_code=500)
 
 
+@app.function_name("join_order_group")
+@app.route(route="join/{trackingId}", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
+def join_order_group(req: func.HttpRequest) -> func.HttpResponse:
+    """Client calls this after connection.start() to be added to the order group."""
+    if req.method == "OPTIONS":
+        return _json_cors_response({}, 200)
+    tracking_id = req.route_params.get("trackingId")
+    if not tracking_id:
+        return _json_cors_response({"error": "trackingId is required"}, status_code=400)
+
+    try:
+        body = req.get_json()
+        connection_id = body.get("connectionId")
+    except Exception:
+        return _json_cors_response({"error": "Request body must be JSON with connectionId"}, status_code=400)
+
+    if not connection_id:
+        return _json_cors_response({"error": "connectionId is required"}, status_code=400)
+
+    group_name = f"order-{tracking_id}"
+    success = _get_signalr_pub().add_connection_to_group(connection_id, group_name)
+    if success:
+        return _json_cors_response({"joined": group_name}, status_code=200)
+    return _json_cors_response({"error": "Failed to join group"}, status_code=500)
+
+
 @app.function_name("get_order_history")
 @app.route(route="orders/{trackingId}/history", methods=["GET", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
 def get_order_history(req: func.HttpRequest) -> func.HttpResponse:

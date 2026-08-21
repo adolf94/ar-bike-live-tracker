@@ -111,6 +111,10 @@ export const hatidkuyaApi = {
     return res.data;
   },
 
+  async joinGroup(trackingId: string, connectionId: string): Promise<void> {
+    await api.post(`/api/join/${trackingId}`, { connectionId });
+  },
+
   async searchLocations(query: string): Promise<LocationSearchResult[]> {
     const res = await api.get('/api/locations/search', {
       params: { q: query },

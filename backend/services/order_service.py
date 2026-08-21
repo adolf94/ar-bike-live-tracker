@@ -137,7 +137,7 @@ class OrderService:
                         lng=lng,
                         timestamp=loc_data["timestamp"]
                     )
-                    # Publish via SignalR only if subscribers are connected to order group
+                    # Publish via SignalR — only delivers if subscriber is in the group (joined via /api/join/{trackingId})
                     self.signalr_publisher.publish_location(tracking_id, loc_data, only_if_connected=True)
 
                 if order_id:

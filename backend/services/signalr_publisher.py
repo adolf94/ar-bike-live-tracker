@@ -51,14 +51,27 @@ class SignalRPublisher:
             "accessToken": token
         }
 
+    def add_connection_to_group(self, connection_id: str, group_name: str) -> bool:
+        """Add a connection to a group via Azure SignalR REST API (serverless mode)."""
+        url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}/groups/{group_name}/connections/{connection_id}"
+        token = self.generate_token(url)
+        headers = {"Authorization": f"Bearer {token}"}
+        try:
+            resp = requests.put(url, headers=headers, timeout=5)
+            if resp.status_code in (200, 202, 204):
+                logger.info("Added connection %s to group %s", connection_id, group_name)
+                return True
+            logger.warning("add_connection_to_group returned %d: %s", resp.status_code, resp.text)
+            return False
+        except Exception as e:
+            logger.warning("add_connection_to_group failed: %s", e)
+            return False
+
     def check_group_has_users(self, group_name: str) -> bool:
         """Check if group currently has active connections/users in Azure SignalR / WebPubSub."""
-        # Azure SignalR REST API: GET /api/v1/hubs/{hub}/groups/{group}/connections/:check or HEAD /api/v1/hubs/{hub}/groups/{group}
         url = f"{self.endpoint}/api/v1/hubs/{self.hub_name}/groups/{group_name}"
         token = self.generate_token(url)
-        headers = {
-            "Authorization": f"Bearer {token}"
-        }
+        headers = {"Authorization": f"Bearer {token}"}
         try:
             resp = requests.head(url, headers=headers, timeout=3)
             # 200 means group exists and has members; 404 means no active connections
@@ -66,10 +79,8 @@ class SignalRPublisher:
                 return True
             if resp.status_code == 404:
                 return False
-            # For emulator or fallback servers that return 200/400, assume True
             return True
         except Exception:
-            # Fallback to True if check endpoint is unsupported
             return True
 
     def broadcast_to_group(self, group_name: str, target: str, arguments: list, only_if_connected: bool = True) -> bool:
@@ -99,6 +110,8 @@ class SignalRPublisher:
 
     def publish_location(self, tracking_id: str, location_data: Dict[str, Any], only_if_connected: bool = True) -> bool:
         group_name = f"order-{tracking_id}"
+        logger.info("publish_location → group=%s lat=%s lng=%s only_if_connected=%s",
+                    group_name, location_data.get("lat"), location_data.get("lng"), only_if_connected)
         return self.broadcast_to_group(group_name, "locationUpdate", [location_data], only_if_connected=only_if_connected)
 
     def publish_order_status(self, tracking_id: str, status_data: Dict[str, Any]) -> bool:
