@@ -22,10 +22,8 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   const { login, logout, isAuthenticated, getAccessToken, isLoading: isAuthLoading } = useAuth();
 
   useEffect(() => {
-    if (isAuthenticated) {
-      setupAxiosAuth(getAccessToken, login);
-    }
-  }, [isAuthenticated, getAccessToken, login]);
+    setupAxiosAuth(getAccessToken, login);
+  }, [getAccessToken, login]);
 
   // Use TanStack Query hooks for data fetching
   const {

@@ -15,7 +15,7 @@ class BroadcastService:
     Automatically detects the provider type from the connection string endpoint.
     """
 
-    def __init__(self, connection_string: str, hub_name: str = "telemetry_hub"):
+    def __init__(self, connection_string: str, hub_name: str = "tracking_hub"):
         self._hub_name = hub_name
         self._connection_string = connection_string
         self._client = None

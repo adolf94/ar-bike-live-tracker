@@ -41,7 +41,7 @@ COSMOS_DB = os.environ.get("COSMOS_DATABASE_NAME", "AntigravityDb")
 COSMOS_CONTAINER = os.environ.get("COSMOS_CONTAINER_NAME", "Telemetry")
 
 PUBSUB_CONN = os.environ.get("AZURE_SIGNALR_CONNECTION_STRING") or os.environ.get("WebPubSubConnectionString", "")
-PUBSUB_HUB = os.environ.get("WEBPUBSUB_HUB_NAME", "telemetry_hub")
+PUBSUB_HUB = os.environ.get("WEBPUBSUB_HUB_NAME", "tracking_hub")
 
 AIKA_SERVER = os.environ.get("AIKA_SERVER_URL", "http://www.aika168.com/")
 AIKA_DEVICE = os.environ.get("AIKA_DEVICE_ID", "")

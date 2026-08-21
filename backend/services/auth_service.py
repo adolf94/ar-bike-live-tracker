@@ -59,8 +59,14 @@ def verify_token(auth_header: str | None, required_scope: str | None = None) -> 
             scopes_list = []
             
         target_scopes = [required_scope] if required_scope else REQUIRED_SCOPES
+        normalized_token_scopes = {s.lower() for s in scopes_list}
         for req_sc in target_scopes:
-            if req_sc and req_sc not in scopes_list:
+            if not req_sc:
+                continue
+            req_lower = req_sc.lower()
+            short_name = req_lower.split("/")[-1]
+            if req_lower not in normalized_token_scopes and short_name not in normalized_token_scopes:
+                logger.warning("Token missing required scope '%s'. Present scopes: %s", req_sc, scopes_list)
                 raise ValueError(f"Token is missing the required scope '{req_sc}'")
 
         return payload

@@ -36,11 +36,12 @@ export function useHatidKuyaSignalR(
         const negotiation = await hatidkuyaApi.negotiate(trackingId!);
         if (!isMounted) return;
 
+        let serviceUrl = negotiation.url;
+        serviceUrl = serviceUrl.replace('localhost', window.location.hostname).replace('127.0.0.1', window.location.hostname);
+
         const connection = new signalR.HubConnectionBuilder()
-          .withUrl(negotiation.url, {
-            accessTokenFactory: () => negotiation.accessToken,
-            skipNegotiation: true,
-            transport: signalR.HttpTransportType.WebSockets,
+          .withUrl(serviceUrl, {
+            accessTokenFactory: () => Promise.resolve(negotiation.accessToken),
           })
           .withAutomaticReconnect()
           .configureLogging(signalR.LogLevel.Warning)

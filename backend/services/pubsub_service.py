@@ -10,13 +10,13 @@ logger = logging.getLogger(__name__)
 
 
 class PubSubService:
-    """Manages broadcasting event payloads to Web PubSub connected clients.
-
-    Uses the ``azure-messaging-webpubsubservice`` SDK to send messages
-    to the ``telemetry_hub`` hub.
+    """Service for broadcasting telemetry events to Azure Web PubSub clients.
+    
+    This service connects to Azure Web PubSub and broadcasts event payloads
+    to the ``tracking_hub`` hub.
     """
 
-    def __init__(self, connection_string: str, hub_name: str = "telemetry_hub"):
+    def __init__(self, connection_string: str, hub_name: str = "tracking_hub"):
         self._hub_name = hub_name
         self._client = WebPubSubServiceClient.from_connection_string(
             connection_string=connection_string,

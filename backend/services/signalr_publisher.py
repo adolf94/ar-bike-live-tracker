@@ -10,9 +10,9 @@ logger = logging.getLogger(__name__)
 
 class SignalRPublisher:
     def __init__(self):
-        self.conn_str = os.environ.get("AZURE_SIGNALR_CONNECTION_STRING", "")
+        self.conn_str = os.environ.get("AZURE_SIGNALR_CONNECTION_STRING", "") or os.environ.get("WebPubSubConnectionString", "")
         self.endpoint, self.access_key = self._parse_connection_string(self.conn_str)
-        self.hub_name = "trackingHub"
+        self.hub_name = os.environ.get("WEBPUBSUB_HUB_NAME", "tracking_hub")
 
     def _parse_connection_string(self, conn_str: str):
         endpoint = "http://localhost:8888"
@@ -44,7 +44,7 @@ class SignalRPublisher:
 
     def negotiate(self, tracking_id: str) -> Dict[str, str]:
         group_name = f"order-{tracking_id}"
-        hub_url = f"{self.endpoint}/client/hubs/{self.hub_name}"
+        hub_url = f"{self.endpoint}/client/?hub={self.hub_name}"
         token = self.generate_token(hub_url, group=group_name)
         return {
             "url": hub_url,
