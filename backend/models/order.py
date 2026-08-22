@@ -20,6 +20,7 @@ class CreateOrderRequest(BaseModel):
     to_lng: Optional[float] = None
     recipient_name: Optional[str] = None
     item_description: Optional[str] = None
+    theme: Optional[str] = "lalamove"  # "lalamove" | "moveit"
 
 
 class UpdateLocationRequest(BaseModel):
@@ -30,6 +31,7 @@ class UpdateLocationRequest(BaseModel):
 class UpdateStatusRequest(BaseModel):
     status: Optional[str] = None  # "active" | "completed" | "cancelled"
     delivery_stage: Optional[str] = None  # "going_to_pickup" | "going_to_dropoff" | "completed"
+    theme: Optional[str] = None  # "lalamove" | "moveit"
 
 
 class Order(BaseModel):
@@ -43,6 +45,7 @@ class Order(BaseModel):
     item_description: Optional[str] = None
     status: str = "active"  # "active" | "completed" | "cancelled"
     delivery_stage: str = "going_to_pickup"  # "going_to_pickup" | "going_to_dropoff" | "completed"
+    theme: str = "lalamove"  # "lalamove" | "moveit"
     created_at: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     last_location: Optional[Location] = None
 

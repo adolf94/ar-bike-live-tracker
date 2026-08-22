@@ -59,6 +59,7 @@ class OrderService:
             to_coords=to_coords_model,
             recipient_name=req.recipient_name,
             item_description=req.item_description,
+            theme=req.theme or "lalamove",
             status="active",
             last_location=initial_loc_model
         )
@@ -86,7 +87,9 @@ class OrderService:
             "toCoords": to_coords_model.model_dump() if to_coords_model else None,
             "recipientName": saved.get("recipient_name"),
             "itemDescription": saved.get("item_description"),
+            "theme": saved.get("theme", "lalamove"),
             "status": saved["status"],
+            "deliveryStage": saved.get("delivery_stage", "going_to_pickup"),
             "lastLocation": initial_loc_model.model_dump() if initial_loc_model else None,
             "createdAt": saved["created_at"]
         }
@@ -262,6 +265,27 @@ class OrderService:
                     "deliveryStage": delivery_stage,
                     "status": order.get("status", "active")
                 })
+
+        return updated
+
+    def update_theme(self, order_id: str, theme: str) -> Optional[Dict[str, Any]]:
+        order = self.order_repo.get_by_id(order_id)
+        if not order:
+            return None
+
+        order["theme"] = theme
+        updated = self.order_repo.update(order)
+
+        if self._cached_active_order and self._cached_active_order.get("id") == order_id:
+            self._cached_active_order["theme"] = theme
+
+        tracking_id = order.get("tracking_id")
+        if tracking_id:
+            self.signalr_publisher.publish_order_status(tracking_id, {
+                "theme": theme,
+                "deliveryStage": order.get("delivery_stage", "going_to_pickup"),
+                "status": order.get("status", "active")
+            })
 
         return updated
 

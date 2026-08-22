@@ -9,6 +9,7 @@ export interface CreateOrderPayload {
   to_lng?: number;
   recipient_name?: string;
   item_description?: string;
+  theme?: 'moveit' | 'lalamove';
 }
 
 export interface OrderLocation {
@@ -26,6 +27,7 @@ export interface OrderData {
   to_coords?: OrderLocation | null;
   recipient_name?: string;
   item_description?: string;
+  theme?: 'moveit' | 'lalamove';
   status: 'active' | 'completed' | 'cancelled';
   delivery_stage?: 'going_to_pickup' | 'going_to_dropoff' | 'completed';
   created_at: string;
@@ -52,7 +54,8 @@ export const hatidkuyaApi = {
     recipientName?: string,
     itemDescription?: string,
     fromCoords?: { lat: number; lng: number },
-    toCoords?: { lat: number; lng: number }
+    toCoords?: { lat: number; lng: number },
+    theme?: 'moveit' | 'lalamove'
   ): Promise<any> {
     const res = await api.post('/api/orders', {
       from_address: fromAddress,
@@ -63,6 +66,7 @@ export const hatidkuyaApi = {
       to_lng: toCoords?.lng,
       recipient_name: recipientName,
       item_description: itemDescription,
+      theme: theme || 'lalamove',
     });
     return res.data;
   },
@@ -97,6 +101,13 @@ export const hatidkuyaApi = {
   async updateDeliveryStage(orderId: string, stage: 'going_to_pickup' | 'going_to_dropoff' | 'completed'): Promise<OrderData> {
     const res = await api.post(`/api/orders/${orderId}/stage`, {
       stage,
+    });
+    return res.data;
+  },
+
+  async updateTheme(orderId: string, theme: 'moveit' | 'lalamove'): Promise<OrderData> {
+    const res = await api.post(`/api/orders/${orderId}/theme`, {
+      theme,
     });
     return res.data;
   },

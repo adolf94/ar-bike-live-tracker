@@ -59,6 +59,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
   const [toAddress, setToAddress] = useState('BGC High Street, Taguig, Metro Manila');
   const [recipientName, setRecipientName] = useState('');
   const [itemDescription, setItemDescription] = useState('');
+  const [selectedTheme, setSelectedTheme] = useState<'moveit' | 'lalamove'>('lalamove');
   const [fromCoords, setFromCoords] = useState<{ lat: number; lng: number }>({
     lat: liveTelemetry?.lat && liveTelemetry.lat !== 0 ? liveTelemetry.lat : 14.5547,
     lng: liveTelemetry?.lng && liveTelemetry.lng !== 0 ? liveTelemetry.lng : 121.0244,
@@ -110,6 +111,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
           setOrder(active);
           setFromAddress(active.from_address);
           setToAddress(active.to_address);
+          if (active.theme) setSelectedTheme(active.theme);
           if (active.recipient_name) setRecipientName(active.recipient_name);
           if (active.item_description) setItemDescription(active.item_description);
           if (active.from_coords) setFromCoords({ lat: active.from_coords.lat, lng: active.from_coords.lng });
@@ -142,7 +144,8 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
         recipientName.trim() || undefined,
         itemDescription.trim() || undefined,
         fromCoords,
-        toCoords
+        toCoords,
+        selectedTheme
       );
       setOrder({
         id: data.orderId,
@@ -153,12 +156,13 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
         to_coords: data.toCoords || { lat: toCoords.lat, lng: toCoords.lng },
         recipient_name: data.recipientName || recipientName,
         item_description: data.itemDescription || itemDescription,
+        theme: data.theme || selectedTheme,
         status: data.status,
         created_at: data.createdAt,
       });
       setBreadcrumbTrail([[fromCoords.lat, fromCoords.lng]]);
       setCoords(fromCoords);
-      addLog(`Order created! Tracking Code: ${data.trackingId}`);
+      addLog(`Order created with ${selectedTheme === 'moveit' ? 'Move It' : 'Lalamove'} theme! Tracking: ${data.trackingId}`);
     } catch (err: any) {
       alert(`Failed to create order: ${err.message}`);
     } finally {
@@ -166,12 +170,35 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
     }
   };
 
+  const handleChangeTheme = async (newTheme: 'moveit' | 'lalamove') => {
+    setSelectedTheme(newTheme);
+    if (!order?.id) return;
+    try {
+      await hatidkuyaApi.updateTheme(order.id, newTheme);
+      setOrder((prev) => (prev ? { ...prev, theme: newTheme } : null));
+      addLog(`Theme updated to ${newTheme === 'moveit' ? 'Move It (Red & Black)' : 'Lalamove (Orange)'}`);
+    } catch (err: any) {
+      alert(`Failed to update theme: ${err.message}`);
+    }
+  };
+
   const copyTrackingLink = async () => {
     if (!order?.tracking_id) return;
     const trackingUrl = `${window.location.origin}/track/${order.tracking_id}`;
-    const recipientText = order.recipient_name ? ` for ${order.recipient_name}` : '';
-    const itemText = order.item_description ? ` (${order.item_description})` : '';
-    const shareMessage = `📦 Your package${recipientText}${itemText} is on the way via Kuya AR!\n\nTrack your live delivery in real-time:\n${trackingUrl}`;
+    const orderTheme = order.theme || selectedTheme;
+    let shareTitle = '';
+    let shareMessage = '';
+
+    if (orderTheme === 'moveit') {
+      const passengerText = order.recipient_name ? ` (${order.recipient_name})` : '';
+      shareTitle = 'Move It Live Ride Tracking';
+      shareMessage = `🛵 Track my live Move It ride${passengerText}!\n\nDriver: Kuya AR • PCX Black (Plate: P2637F)\n\nLive Ride Status:\n${trackingUrl}`;
+    } else {
+      const recipientText = order.recipient_name ? ` for ${order.recipient_name}` : '';
+      const itemText = order.item_description ? ` (${order.item_description})` : '';
+      shareTitle = 'Live Package Tracking';
+      shareMessage = `📦 Your package${recipientText}${itemText} is on the way!\n\nTrack your live delivery in real-time:\n${trackingUrl}`;
+    }
 
     try {
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -184,7 +211,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'Live Delivery Tracking - Kuya AR',
+          title: shareTitle,
           text: shareMessage,
         });
       } catch {
@@ -270,6 +297,8 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
   }, []);
 
   const trackingFullUrl = order ? `${window.location.origin}/track/${order.tracking_id}` : '';
+  const currentTheme = order?.theme || selectedTheme;
+  const isMoveIt = currentTheme === 'moveit';
 
   const activeBounds: [number, number][] = useMemo(() => {
     const list: [number, number][] = [];
@@ -305,7 +334,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                   [toCoords.lat, toCoords.lng],
                 ]}
                 pathOptions={{
-                  color: '#10b981',
+                  color: selectedTheme === 'moveit' ? '#e53935' : '#10b981',
                   weight: 4,
                   opacity: 0.85,
                   dashArray: '8, 8',
@@ -335,8 +364,15 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
             </MapContainer>
           </div>
 
-          {/* Top Floating Map Legend (Minimal, Compact) */}
-          <div className="relative z-10 p-3 pointer-events-none flex justify-end items-center">
+          {/* Top Floating Map Legend & Brand Pill */}
+          <div className="relative z-10 p-3 pointer-events-none flex justify-between items-center">
+            <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 py-1 px-3 rounded-xl shadow-xl pointer-events-auto flex items-center gap-2 text-xs">
+              <span className={`w-2 h-2 rounded-full ${selectedTheme === 'moveit' ? 'bg-[#e53935]' : 'bg-emerald-500'}`} />
+              <span className="font-bold text-white uppercase text-[11px]">
+                {selectedTheme === 'moveit' ? 'Move It View' : 'Lalamove View'}
+              </span>
+            </div>
+
             <div className="bg-slate-900/90 backdrop-blur-xl border border-slate-700/60 py-1 px-2.5 rounded-xl shadow-xl pointer-events-auto flex items-center gap-2.5 text-[11px]">
               <span className="flex items-center gap-1 text-emerald-400 font-medium">
                 <span className="w-2 h-2 rounded-full bg-emerald-400" /> Pickup
@@ -347,10 +383,39 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
             </div>
           </div>
 
-          {/* Floating Bottom Drawer Card (Compact Grab/Uber style) */}
+          {/* Floating Bottom Drawer Card */}
           <div className="relative z-10 mt-auto p-2.5 sm:p-4 pointer-events-none">
             <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-2xl p-3.5 sm:p-4 shadow-2xl pointer-events-auto max-w-lg mx-auto">
               <form onSubmit={handleCreateOrder} className="flex flex-col gap-2">
+                {/* Theme Selector Tab */}
+                <div className="flex items-center justify-between bg-slate-950/80 p-1 rounded-xl border border-slate-800">
+                  <span className="text-[10px] uppercase font-bold text-slate-400 px-2">Interface Style:</span>
+                  <div className="flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTheme('lalamove')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        selectedTheme === 'lalamove'
+                          ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" /> Lalamove Style
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedTheme('moveit')}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer flex items-center gap-1 ${
+                        selectedTheme === 'moveit'
+                          ? 'bg-[#e53935] text-white shadow-md shadow-red-500/30'
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full bg-white" /> Move It Style
+                    </button>
+                  </div>
+                </div>
+
                 <LocationSearchInput
                   label="Pickup"
                   placeholder="Enter pickup point..."
@@ -377,7 +442,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                 <div className="grid grid-cols-2 gap-2">
                   <div className="flex flex-col gap-0.5">
                     <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Recipient
+                      {selectedTheme === 'moveit' ? 'Passenger' : 'Recipient'}
                     </label>
                     <input
                       type="text"
@@ -390,11 +455,11 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
 
                   <div className="flex flex-col gap-0.5">
                     <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
-                      Items
+                      {selectedTheme === 'moveit' ? 'Trip Note' : 'Items'}
                     </label>
                     <input
                       type="text"
-                      placeholder="e.g. Package"
+                      placeholder={selectedTheme === 'moveit' ? 'e.g. Near gate' : 'e.g. Package'}
                       value={itemDescription}
                       onChange={(e) => setItemDescription(e.target.value)}
                       className="bg-slate-950/80 border border-slate-800 focus:border-emerald-500/80 rounded-lg px-2.5 py-1.5 text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none transition-all"
@@ -405,10 +470,14 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full mt-1 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md shadow-emerald-600/20 cursor-pointer text-xs sm:text-sm"
+                  className={`w-full mt-1 ${
+                    selectedTheme === 'moveit'
+                      ? 'bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 shadow-red-600/30'
+                      : 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 shadow-emerald-600/30'
+                  } disabled:opacity-50 text-white font-bold py-2.5 px-4 rounded-xl flex items-center justify-center gap-2 transition-all shadow-md cursor-pointer text-xs sm:text-sm`}
                 >
                   <Send className="w-3.5 h-3.5" />
-                  {loading ? 'Creating Trip...' : 'Create Order & Start Delivery'}
+                  {loading ? 'Creating Trip...' : `Create Order (${selectedTheme === 'moveit' ? 'Move It' : 'Lalamove'})`}
                 </button>
               </form>
             </div>
@@ -436,7 +505,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                 <Polyline
                   positions={breadcrumbTrail}
                   pathOptions={{
-                    color: '#3b82f6',
+                    color: isMoveIt ? '#e53935' : '#ff6b00',
                     weight: 5,
                     opacity: 0.95,
                     lineCap: 'round',
@@ -484,7 +553,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
               <Marker position={[coords.lat, coords.lng]} icon={createRiderIcon()}>
                 <Popup>
                   <div className="text-slate-900 text-xs">
-                    <strong>Kuya Rider (You)</strong>
+                    <strong>{isMoveIt ? 'Move It Rider (You)' : 'Kuya Rider (You)'}</strong>
                     <div>Lat: {coords.lat.toFixed(4)}, Lng: {coords.lng.toFixed(4)}</div>
                   </div>
                 </Popup>
@@ -492,25 +561,49 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
             </MapContainer>
           </div>
 
-          {/* Floating Top Nav: Single Ultra-Compact Combined Status & Share Pill */}
+          {/* Floating Top Nav: Status & Theme Toggle Pill */}
           <div className="relative z-10 p-2.5 sm:p-3 pointer-events-none flex justify-center items-center">
             <div className="bg-slate-900/95 backdrop-blur-xl border border-slate-700/70 p-1.5 rounded-2xl shadow-2xl pointer-events-auto flex items-center justify-between gap-2 max-w-lg w-full">
               {/* Left Status Pill */}
               <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-slate-950/80 border border-slate-800/80 shrink-0">
-                <span className={`w-2 h-2 rounded-full ${isStreaming ? 'bg-emerald-400 animate-ping' : 'bg-slate-400'}`} />
+                <span className={`w-2 h-2 rounded-full ${isStreaming ? (isMoveIt ? 'bg-red-400 animate-ping' : 'bg-emerald-400 animate-ping') : 'bg-slate-400'}`} />
                 <span className="text-[11px] font-bold text-white uppercase tracking-wider">
                   {order.status === 'completed' ? 'Done' : isStreaming ? 'Live GPS' : 'Paused'}
                 </span>
-                <span className="text-[10px] font-mono text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded border border-emerald-500/20 font-bold ml-0.5">
+                <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border font-bold ml-0.5 ${
+                  isMoveIt ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-orange-400 bg-orange-500/10 border-orange-500/20'
+                }`}>
                   #{order.tracking_id}
                 </span>
               </div>
 
-              {/* Right Share Actions */}
+              {/* Theme Switcher in Rider Console */}
+              <div className="flex items-center bg-slate-950/90 rounded-xl p-0.5 border border-slate-800">
+                <button
+                  onClick={() => handleChangeTheme('moveit')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    isMoveIt ? 'bg-[#e53935] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Switch to Move It interface (broadcasts live via SignalR)"
+                >
+                  Move It
+                </button>
+                <button
+                  onClick={() => handleChangeTheme('lalamove')}
+                  className={`px-2 py-1 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    !isMoveIt ? 'bg-[#ff6b00] text-white shadow-sm' : 'text-slate-400 hover:text-slate-200'
+                  }`}
+                  title="Switch to Lalamove interface (broadcasts live via SignalR)"
+                >
+                  Lalamove
+                </button>
+              </div>
+
+              {/* Right Share & View Actions */}
               <div className="flex items-center gap-1 min-w-0">
                 <button
                   onClick={copyTrackingLink}
-                  className="bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-sm"
+                  className="bg-slate-800 hover:bg-slate-700 text-white text-[11px] font-semibold px-2 py-1.5 rounded-xl flex items-center gap-1 transition-all cursor-pointer shadow-sm"
                   title="Copy Tracking Message"
                 >
                   {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
@@ -520,8 +613,10 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                   href={trackingFullUrl}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center border border-emerald-500/30"
-                  title="Open Recipient View (New Tab)"
+                  className={`p-1.5 rounded-xl transition-all cursor-pointer flex items-center justify-center border ${
+                    isMoveIt ? 'bg-red-600/20 hover:bg-red-600/30 text-red-400 border-red-500/30' : 'bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border-emerald-500/30'
+                  }`}
+                  title="Open Track Screen in New Tab"
                 >
                   <ExternalLink className="w-3.5 h-3.5" />
                 </a>
@@ -529,7 +624,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
             </div>
           </div>
 
-          {/* Floating Bottom Drawer Controls (Compact) */}
+          {/* Floating Bottom Drawer Controls */}
           <div className="relative z-10 mt-auto p-2.5 sm:p-4 pointer-events-none">
             <div className="bg-slate-900/95 backdrop-blur-2xl border border-slate-800 rounded-2xl p-3 sm:p-4 shadow-2xl pointer-events-auto max-w-lg mx-auto flex flex-col gap-2">
               {/* Trip Points & Package Details */}
@@ -541,8 +636,8 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                   <div className="text-slate-200 font-semibold truncate mt-0.5">{order.from_address}</div>
                 </div>
                 <div className="min-w-0">
-                  <div className="text-[10px] uppercase font-bold text-rose-400 flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-rose-400" /> Drop-off
+                  <div className={`text-[10px] uppercase font-bold flex items-center gap-1 ${isMoveIt ? 'text-red-400' : 'text-rose-400'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${isMoveIt ? 'bg-red-400' : 'bg-rose-400'}`} /> Drop-off
                   </div>
                   <div className="text-slate-200 font-semibold truncate mt-0.5">{order.to_address}</div>
                 </div>
@@ -550,13 +645,17 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                   <div className="col-span-2 pt-1.5 border-t border-slate-800/60 grid grid-cols-2 gap-1.5">
                     {order.recipient_name && (
                       <div className="truncate">
-                        <span className="text-[9px] uppercase font-bold text-slate-500 mr-1">Recipient:</span>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 mr-1">
+                          {isMoveIt ? 'Passenger:' : 'Recipient:'}
+                        </span>
                         <span className="text-slate-300 font-medium">{order.recipient_name}</span>
                       </div>
                     )}
                     {order.item_description && (
                       <div className="truncate">
-                        <span className="text-[9px] uppercase font-bold text-slate-500 mr-1">Items:</span>
+                        <span className="text-[9px] uppercase font-bold text-slate-500 mr-1">
+                          {isMoveIt ? 'Trip Note:' : 'Items:'}
+                        </span>
                         <span className="text-slate-300 font-medium">{order.item_description}</span>
                       </div>
                     )}
@@ -573,7 +672,7 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                       onClick={() => handleSetStage('going_to_pickup')}
                       className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer ${
                         (order.delivery_stage || 'going_to_pickup') === 'going_to_pickup'
-                          ? 'bg-[#ff6b00] text-white shadow-sm'
+                          ? isMoveIt ? 'bg-[#e53935] text-white shadow-sm' : 'bg-[#ff6b00] text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
@@ -585,11 +684,11 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                       onClick={() => handleSetStage('going_to_dropoff')}
                       className={`py-1.5 px-2 rounded-lg font-bold text-[11px] flex items-center justify-center gap-1 transition-all cursor-pointer ${
                         order.delivery_stage === 'going_to_dropoff'
-                          ? 'bg-[#ff6b00] text-white shadow-sm'
+                          ? isMoveIt ? 'bg-[#e53935] text-white shadow-sm' : 'bg-[#ff6b00] text-white shadow-sm'
                           : 'text-slate-400 hover:text-slate-200'
                       }`}
                     >
-                      <span className="w-1.5 h-1.5 rounded-full bg-rose-400" />
+                      <span className={`w-1.5 h-1.5 rounded-full ${isMoveIt ? 'bg-red-400' : 'bg-rose-400'}`} />
                       To Drop-off
                     </button>
                   </div>
@@ -602,7 +701,9 @@ export function RiderConsole({ liveTelemetry }: RiderConsoleProps) {
                       className={`flex-1 py-2 px-3 rounded-xl font-bold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md cursor-pointer ${
                         isStreaming
                           ? 'bg-amber-600/20 text-amber-300 border border-amber-500/30 hover:bg-amber-600/30'
-                          : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
+                          : isMoveIt
+                            ? 'bg-red-600 text-white hover:bg-red-500 shadow-red-600/20'
+                            : 'bg-emerald-600 text-white hover:bg-emerald-500 shadow-emerald-600/20'
                       }`}
                     >
                       {isStreaming ? (

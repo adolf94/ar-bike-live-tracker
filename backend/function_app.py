@@ -906,6 +906,30 @@ def update_order_stage(req: func.HttpRequest) -> func.HttpResponse:
         return _json_cors_response({"error": str(e)}, status_code=400)
 
 
+@app.function_name("update_order_theme")
+@app.route(route="orders/{orderId}/theme", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
+def update_order_theme(req: func.HttpRequest) -> func.HttpResponse:
+    if req.method == "OPTIONS":
+        return _json_cors_response({}, 200)
+    auth_err = _check_auth(req)
+    if auth_err:
+        return auth_err
+    order_id = req.route_params.get("orderId")
+    if not order_id:
+        return _json_cors_response({"error": "orderId is required"}, status_code=400)
+
+    try:
+        body = req.get_json()
+        theme = body.get("theme") or "moveit"
+        updated = _get_order_service().update_theme(order_id, theme)
+        if not updated:
+            return _json_cors_response({"error": "Order not found"}, status_code=404)
+        return _json_cors_response(updated, status_code=200)
+    except Exception as e:
+        logger.exception("Error updating theme: %s", e)
+        return _json_cors_response({"error": str(e)}, status_code=400)
+
+
 @app.function_name("complete_order")
 @app.route(route="orders/{orderId}/complete", methods=["POST", "OPTIONS"], auth_level=func.AuthLevel.ANONYMOUS)
 def complete_order(req: func.HttpRequest) -> func.HttpResponse:
