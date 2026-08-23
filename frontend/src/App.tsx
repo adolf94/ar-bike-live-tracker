@@ -25,35 +25,6 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
     setupAxiosAuth(getAccessToken, login);
   }, [getAccessToken, login]);
 
-  // Use TanStack Query hooks for data fetching
-  const {
-    data: currentData,
-    isLoading: currentLoading,
-    isFetching: currentFetching,
-    error: currentError,
-  } = useCurrentTelemetry();
-
-  const {
-    data: eventsData = [],
-    isLoading: eventsLoading,
-    isFetching: eventsFetching,
-    error: eventsError,
-  } = useTelemetryEvents(40);
-
-  const { refreshAll } = useRefreshTelemetry();
-  const { getCachedCurrent, getCachedEvents } = useCachedTelemetry();
-
-  // Check if we have cached data to determine if we should show skeletons
-  const hasCachedCurrent = !!getCachedCurrent();
-  const hasCachedEvents = !!getCachedEvents()?.length;
-
-  // Get data from either fresh query or cache
-  const latestData = currentData || getCachedCurrent();
-  const events = eventsData.length > 0 ? eventsData : (getCachedEvents() || []);
-
-  const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
-  const [showTempPin, setShowTempPin] = useState(false);
-
   // Routing parser helper
   const parseCurrentRoute = () => {
     const pathname = window.location.pathname;
@@ -79,6 +50,36 @@ function App({ theme, setTheme }: { theme: 'light' | 'dark'; setTheme: (val: 'li
   const [activeTab, setActiveTab] = useState<'telemetry' | 'hatidkuya'>(initialRoute.tab);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
   const [trackedOrderId, setTrackedOrderId] = useState<string | null>(initialRoute.trackedId);
+
+  // Use TanStack Query hooks for data fetching (only when authenticated and on telemetry dashboard)
+  const isTelemetryActive = isAuthenticated && !trackedOrderId && activeTab === 'telemetry';
+  const {
+    data: currentData,
+    isLoading: currentLoading,
+    isFetching: currentFetching,
+    error: currentError,
+  } = useCurrentTelemetry({ enabled: isTelemetryActive });
+
+  const {
+    data: eventsData = [],
+    isLoading: eventsLoading,
+    isFetching: eventsFetching,
+    error: eventsError,
+  } = useTelemetryEvents(40, { enabled: isTelemetryActive });
+
+  const { refreshAll } = useRefreshTelemetry();
+  const { getCachedCurrent, getCachedEvents } = useCachedTelemetry();
+
+  // Check if we have cached data to determine if we should show skeletons
+  const hasCachedCurrent = !!getCachedCurrent();
+  const hasCachedEvents = !!getCachedEvents()?.length;
+
+  // Get data from either fresh query or cache
+  const latestData = currentData || getCachedCurrent();
+  const events = eventsData.length > 0 ? eventsData : (getCachedEvents() || []);
+
+  const [flyToLocation, setFlyToLocation] = useState<LocationData | null>(null);
+  const [showTempPin, setShowTempPin] = useState(false);
 
   // Only initialize WebSocket subscriptions if authenticated AND on the telemetry tab
   // WebSocket will update the TanStack Query cache directly

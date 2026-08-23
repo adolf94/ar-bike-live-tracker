@@ -12,13 +12,14 @@ export const telemetryQueryKeys = {
 };
 
 // Hook for fetching current telemetry data
-export function useCurrentTelemetry() {
+export function useCurrentTelemetry(options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: telemetryQueryKeys.current(),
     queryFn: async (): Promise<TelemetryDocument> => {
       const response = await api.get<TelemetryDocument>('/api/telemetry/current');
       return response.data;
     },
+    enabled: options?.enabled ?? true,
     // Mark this query for persistence in localStorage
     meta: {
       persist: true,
@@ -34,7 +35,7 @@ export function useCurrentTelemetry() {
 }
 
 // Hook for fetching telemetry events
-export function useTelemetryEvents(limit: number = 20) {
+export function useTelemetryEvents(limit: number = 20, options?: { enabled?: boolean }) {
   return useQuery({
     queryKey: telemetryQueryKeys.events(limit),
     queryFn: async (): Promise<TelemetryDocument[]> => {
@@ -43,6 +44,7 @@ export function useTelemetryEvents(limit: number = 20) {
       });
       return response.data;
     },
+    enabled: options?.enabled ?? true,
     meta: {
       persist: true,
     },
