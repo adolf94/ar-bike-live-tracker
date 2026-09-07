@@ -4,7 +4,7 @@ A serverless, real-time telemetry monitoring system for Honda PCX 160 vehicles t
 
 ## Features
 
-- **Real-time Telemetry Polling**: Fetches vehicle data every 20 seconds from AIKA API
+- **Real-time Telemetry Polling**: Fetches vehicle data every 1 minute from AIKA API
 - **Event Detection**: Detects movement start/stop, unauthorized movement, and engine status changes
 - **WebSocket Broadcasting**: Real-time updates to connected frontend clients using Azure Web PubSub
 - **Historical Data Storage**: Persists all telemetry data in Azure Cosmos DB for analytics

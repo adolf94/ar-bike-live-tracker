@@ -16,7 +16,7 @@
 ### 2.1 Core Services
 
 #### Azure Functions (Consumption Plan)
-- **Polling Trigger:** Timer trigger executing every 20 seconds (`*/20 * * * * *`)
+- **Polling Trigger:** Timer trigger executing every 1 minute (`0 */1 * * * *`)
 - **Primary Responsibilities:**
   1. Authenticate with AIKA API using OAuth2 token
   2. Fetch current telemetry state from vehicle
@@ -45,7 +45,7 @@
 
 #### AIKA REST API Integration
 - **Protocol:** HTTP REST with OAuth2 authentication
-- **Polling Frequency:** 20-second intervals
+- **Polling Frequency:** 1-minute intervals
 - **Data Points:** GPS location, speed, ignition status, battery level, online status
 
 #### Authentication Service (auth.adolfrey.com)
@@ -91,7 +91,7 @@ Documents stored in Cosmos DB follow a structured format optimized for state com
   "eventTriggered": "movement_started",
   "deviceTime": "2026-07-11T23:22:55Z",
   "metadata": {
-    "pollInterval": 20,
+    "pollInterval": 60,
     "apiVersion": "2.0",
     "deviceModel": "Honda PCX 160"
   }
@@ -189,7 +189,7 @@ Event detection uses composite logic combining multiple telemetry parameters to 
 
 ## 5. System Sequence Flow
 
-### 5.1 Main Polling Cycle (20-second interval)
+### 5.1 Main Polling Cycle (1-minute interval)
 
 1. **Timer Trigger** → Azure Function wakes up (Consumption plan)
 2. **Authentication** → Refresh OAuth2 token if expired

@@ -121,7 +121,7 @@ def _get_cloud_messaging() -> CloudMessagingService:
 
 
 # ====================================================================== #
-#  TIMER TRIGGER — Poller (every 20 seconds)
+#  TIMER TRIGGER — Poller (every 1 minute)
 # ====================================================================== #
 
 
