@@ -1,0 +1,35 @@
+{
+  "name": "bike-tracker-dev",
+  "dockerComposeFile": ["../docker-compose.yml", "docker-compose.dev.yml"],
+  "service": "dev",
+  "runServices": ["dev", "db"],
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "charliermarsh.ruff",
+        "ms-python.debugpy",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "ms-azuretools.vscode-docker"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.testing.pytestEnabled": true,
+        "python.testing.pytestArgs": ["backend/tests"],
+        "editor.formatOnSave": true,
+        "[python]": { "editor.defaultFormatter": "charliermarsh.ruff" }
+      }
+    }
+  },
+  "remoteUser": "root",
+  "postCreateCommand": "pip install -r backend/requirements.txt -r backend/requirements-selfhost.txt -r backend/requirements-dev.txt && (cd frontend && [ -d node_modules ] || npm install)",
+  "forwardPorts": [8000, 5173, 5432],
+  "portsAttributes": {
+    "5432": { "label": "Postgres", "onAutoForward": "silent" },
+    "8000": { "label": "FastAPI (uvicorn --reload)", "onAutoForward": "notify" },
+    "5173": { "label": "Vite dev server", "onAutoForward": "notify" }
+  }
+}

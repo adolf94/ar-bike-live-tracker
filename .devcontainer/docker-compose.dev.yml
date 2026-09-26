@@ -1,0 +1,31 @@
+# Dev-only overrides: this file is layered on top of docker-compose.yml by the
+# devcontainer (see devcontainer.json dockerComposeFile). Never used in prod.
+#
+# Postgres here does NOT restart after a host reboot — you start it when you
+# open the dev container / run `docker compose up -d` yourself. Data persists
+# in the shared pgdata volume across reboots regardless.
+services:
+  dev:
+    # Built from ./Dockerfile (python devcontainer base + node/npm). Paths are
+    # relative to the project dir, which is the folder of the FIRST compose file
+    # in devcontainer.json (docker-compose.yml at the repo root) -- not to this file.
+    build:
+      context: .devcontainer
+      dockerfile: Dockerfile
+    volumes:
+      - ./:/workspace:cached
+      # OpenCode: reuse host-local session data / config + CLI binary
+      - ${HOME}/.local/share/opencode:/root/.local/share/opencode
+      - ${HOME}/.config/opencode:/root/.config/opencode
+      - ${HOME}/.opencode/bin/opencode:/usr/local/bin/opencode:ro
+      # npm: use host ~/.npmrc (token for @adolf94) inside the container
+      - ${HOME}/.npmrc:/root/.npmrc
+    command: sleep infinity
+    environment:
+      DATABASE_URL: postgresql+asyncpg://tracker:tracker@db:5432/biketracker
+    depends_on:
+      - db
+
+  db:
+    #Overrides the prod compose restart policy. Data still persists via the pgdata volume.
+    restart: "no"
