@@ -38,7 +38,8 @@ jobs:
               "VITE_API_BASE": "${{ vars.VITE_API_BASE }}",
               "VITE_OIDC_AUTHORITY": "${{ vars.VITE_OIDC_AUTHORITY }}",
               "VITE_OIDC_CLIENT_ID": "${{ vars.VITE_OIDC_CLIENT_ID }}",
-              "VITE_OIDC_REDIRECT_URI": "${{ vars.VITE_OIDC_REDIRECT_URI }}"
+              "VITE_OIDC_REDIRECT_URI": "${{ vars.VITE_OIDC_REDIRECT_URI }}",
+              "VITE_CARTOKEY": "${{ vars.VITE_CARTOKEY }}"
             }
 
       - name: Move/Rename config.json to js

@@ -78,3 +78,9 @@ def verify_token(auth_header: str | None, required_scope: str | None = None) -> 
     except Exception as e:
         logger.error(f"Token validation failed: {str(e)}")
         raise ValueError("Token validation failed")
+
+
+def decode_token(auth_header: str | None) -> dict:
+    """Decode without enforcing any particular scope (used when the endpoint
+    only needs the claims, e.g. extracting the user id)."""
+    return verify_token(auth_header, required_scope="")

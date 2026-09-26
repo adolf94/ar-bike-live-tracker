@@ -75,6 +75,7 @@ npm run dev
 1. Copy `backend/local.settings.example.json` to `backend/local.settings.json`
 2. Copy `frontend/public/appconfig.example.js` to `frontend/public/appconfig.js`
 3. Configure API endpoints, authentication, and Azure service credentials
+4. Set `VITE_CARTOKEY` in `frontend/public/appconfig.js` (and as a repo variable for CI) to use CARTO basemaps — get a free key at https://carto.com/basemaps/apikey. Without it the map falls back to Esri's keyless gray canvas, because CARTO watermarks keyless raster tile requests.
 
 ## Deployment
 

@@ -2,6 +2,62 @@
   "version": "0.2.0",
   "configurations": [
     {
+      "name": "Debug: FastAPI (uvicorn selfhost.app)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "selfhost.app:app",
+        "--reload",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend",
+        "DATABASE_URL": "postgresql+asyncpg://tracker:tracker@db:5432/biketracker"
+      },
+      "envFile": "${workspaceFolder}/.env",
+      "jinja": false,
+      "justMyCode": false
+    },
+    {
+      "name": "Debug: FastAPI (no reload, entrypoint break)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "selfhost.app:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000"
+      ],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend",
+        "DATABASE_URL": "postgresql+asyncpg://tracker:tracker@db:5432/biketracker"
+      },
+      "envFile": "${workspaceFolder}/.env",
+      "justMyCode": false,
+      "stopOnEntry": false
+    },
+    {
+      "name": "Debug: pytest (backend tests)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-vv"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/backend",
+        "DATABASE_URL": "postgresql+asyncpg://tracker:tracker@db:5432/biketracker"
+      },
+      "justMyCode": false
+    },
+    {
       "name": "Attach to Python Functions1",
       "type": "python",
       "request": "attach",

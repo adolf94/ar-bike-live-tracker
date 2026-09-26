@@ -96,9 +96,45 @@ function FlyToMapUpdater({ target, onFlyComplete }: { target: LocationData | nul
   return null;
 }
 
+// CARTO raster basemaps require an API key (free at https://carto.com/basemaps/apikey).
+// Keyless requests still return 200 but are watermarked "API KEY REQUIRED", so fall
+// back to Esri's keyless gray canvas when no key is configured.
+const cartoKey = (window as any).APP_CONFIG?.VITE_CARTOKEY || import.meta.env.VITE_CARTOKEY || '';
+
+const OSM_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+const CARTO_ATTRIBUTION = `${OSM_ATTRIBUTION} &copy; <a href="https://carto.com/attributions">CARTO</a>`;
+const ESRI_ATTRIBUTION = 'Esri, HERE, Garmin, &copy; OpenStreetMap contributors';
+
+const CARTO_STYLES: Record<'light' | 'dark', string> = {
+  light: 'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+  dark: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
+};
+
+const ESRI_STYLES: Record<'light' | 'dark', { base: string; labels: string }> = {
+  light: {
+    base: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    labels: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+  },
+  dark: {
+    base: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+    labels: 'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+  },
+};
+
+function getBasemap(theme: 'light' | 'dark') {
+  if (cartoKey) {
+    return {
+      url: `${CARTO_STYLES[theme]}?key=${encodeURIComponent(cartoKey)}`,
+      attribution: CARTO_ATTRIBUTION,
+    };
+  }
+  return { url: ESRI_STYLES[theme].base, labels: ESRI_STYLES[theme].labels, attribution: ESRI_ATTRIBUTION };
+}
+
 export function MapView({ location, isOnline, theme, targetLocation, showTempPin }: { location: LocationData; isOnline: boolean; theme: 'light' | 'dark'; targetLocation?: LocationData | null; showTempPin?: boolean }) {
   const position: [number, number] = [location.lat || 0, location.lng || 0];
   const [tempPin, setTempPin] = useState<LocationData | null>(null);
+  const basemap = getBasemap(theme);
   
   useEffect(() => {
     console.log('MapView effect:', { targetLocation, showTempPin });
@@ -132,13 +168,10 @@ export function MapView({ location, isOnline, theme, targetLocation, showTempPin
         className="absolute inset-0 w-full h-full z-0"
         zoomControl={false}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-          url={theme === 'light' 
-            ? "https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-            : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
-          }
-        />
+        <TileLayer attribution={basemap.attribution} url={basemap.url} />
+        {'labels' in basemap && basemap.labels && (
+          <TileLayer attribution="" url={basemap.labels} />
+        )}
         <MapResizer />
         <MapUpdater center={position} />
         <FlyToMapUpdater target={targetLocation ?? null} onFlyComplete={handleFlyComplete} />

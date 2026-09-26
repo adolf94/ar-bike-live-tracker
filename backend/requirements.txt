@@ -2,7 +2,7 @@ azure-functions
 azure-cosmos>=4.7.0
 azure-identity>=1.15.0
 azure-messaging-webpubsubservice>=1.1.0
-obdtracker @ git+https://github.com/nyxnyx/gps_obd2_tracker.git@master
+obdtracker @ git+https://github.com/nyxnyx/gps_obd2_tracker.git@23e8079ce96d5b576e90444d9203cd501c4232e8
 httpx>=0.28.1
 uuid-utils>=0.17.0
 PyJWT[crypto]>=2.8.0

@@ -22,11 +22,15 @@ class MemoryCacheService(IStateStore):
     Thread-safe for Azure Functions concurrent access.
     """
 
-    def __init__(self, cosmos_service: CosmosService):
-        """Initialize cache with CosmosDB fallback service.
-        
+    def __init__(self, cosmos_service=None):
+        """Initialize cache, optionally with a fallback query service.
+
+        The selfhost (Postgres) app passes ``None`` and wires the TelemetryStore
+        in directly where historical queries are needed; the Cosmos (Functions)
+        app passes a CosmosService for fallback/history queries.
+
         Args:
-            cosmos_service: CosmosService instance for fallback queries
+            cosmos_service: Optional CosmosService instance for fallback queries
         """
         self._cosmos = cosmos_service
         self._latest_document: Optional[TelemetryDocument] = None
@@ -71,7 +75,9 @@ class MemoryCacheService(IStateStore):
                 logger.debug("Cache hit for device %s", device_id)
                 return self._latest_document
         
-        # 2. Cache miss - query CosmosDB
+        # 2. Cache miss - query fallback store (if one is configured)
+        if self._cosmos is None:
+            return self._latest_document if self._latest_document is not None else None
         logger.debug("Cache miss for device %s, querying CosmosDB", device_id)
         try:
             cosmos_doc = await self._cosmos.get_previous_state(device_id)
