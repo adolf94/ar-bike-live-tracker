@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       deploy:
-        description: 'Deploy to homelab via webhook (push to GHCR always happens)'
+        description: "Deploy to homelab via webhook (push to GHCR always happens)"
         type: boolean
         default: true
 
@@ -129,4 +129,4 @@ jobs:
             -H "CF-Access-Client-Secret: $CLIENT_SECRET" \
             -H "X-Timestamp: $TS" -H "X-Signature: $SIG" \
             -H "Content-Type: application/json" --data "$BODY" \
-            https://apis.adolfrey.com/gh_webhooks
+            https://apis.adolfrey.com/gh_webhooks/d
