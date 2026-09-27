@@ -13,7 +13,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from db import DeviceTokenRow, OrderLocationHistoryRow, OrderRow, TelemetryRow
+from .db import DeviceTokenRow, OrderLocationHistoryRow, OrderRow, TelemetryRow
 from models.documents import DeviceTokenDocument, TelemetryDocument
 
 logger = logging.getLogger(__name__)

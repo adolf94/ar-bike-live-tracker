@@ -35,10 +35,10 @@ for _p in (_THIS_DIR, _BACKEND_ROOT):
 
 from models.documents import TelemetryDocument
 
-from db import SessionLocal, init_db
-from pg_repositories import PostgresOrderRepository, TelemetryStore
-from sync_bridge import set_main_loop
-from ws_hub import TELEMETRY_GROUP, hub, order_group
+from .db import SessionLocal, init_db
+from .pg_repositories import PostgresOrderRepository, TelemetryStore
+from .sync_bridge import set_main_loop
+from .ws_hub import TELEMETRY_GROUP, hub, order_group
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 logger = logging.getLogger(__name__)
