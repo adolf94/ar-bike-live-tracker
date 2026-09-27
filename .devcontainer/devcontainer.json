@@ -1,5 +1,5 @@
 {
-  "name": "bike-tracker-dev",
+  "name": "biketracker-dev",
   "dockerComposeFile": ["../docker-compose.yml", "docker-compose.dev.yml"],
   "service": "dev",
   "runServices": ["dev", "db"],

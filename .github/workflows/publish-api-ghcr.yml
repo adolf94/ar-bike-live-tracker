@@ -118,7 +118,9 @@ jobs:
           CLIENT_SECRET: ${{ secrets.CF_ACCESS_CLIENT_SECRET }}
           HOOK_SECRET: ${{ secrets.HOMELAB_WEBHOOK_SECRET }}
         run: |
-          TAG="${{ github.sha }}"
+          # GHCR gets tags like sha-<short7> (metadata-action, prefix=sha-); post
+          # the same format here or the webhook pulls a tag that doesn't exist
+          TAG="sha-$(printf '%s' "${{ github.sha }}" | cut -c1-7)"
           BODY=$(jq -nc --arg repo "${{ github.repository }}" --arg tag "$TAG" '{repo:$repo, tag:$tag}')
           TS=$(date +%s)
           SIG=$(printf '%s.%s' "$TS" "$BODY" | openssl dgst -sha256 -hmac "$HOOK_SECRET" -r | cut -d' ' -f1)
