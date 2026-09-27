@@ -11,6 +11,7 @@ serialize without any schema translation; indexed columns are extracted
 for the queries the app actually runs.
 """
 
+import asyncio
 import os
 
 from sqlalchemy import (
@@ -106,7 +107,21 @@ class OrderLocationHistoryRow(Base):
 Index("ix_olh_tracking_time", OrderLocationHistoryRow.tracking_id, OrderLocationHistoryRow.recorded_ts)
 
 
+def _run_migrations_sync() -> None:
+    """Run `alembic upgrade head` on a worker thread (sync psycopg2)."""
+    from alembic import command
+    from alembic.config import Config
+
+    alembic_cfg = Config(
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic.ini")
+    )
+    command.upgrade(alembic_cfg, "head")
+
+
 async def init_db() -> None:
-    """Create tables on startup (mirrors create_if_not_exists in Cosmos code)."""
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    """Bring the schema to the latest version via Alembic on startup.
+
+    `upgrade head` is idempotent: brand-new databases get the full
+    baseline, existing ones get only pending migrations.
+    """
+    await asyncio.to_thread(_run_migrations_sync)
