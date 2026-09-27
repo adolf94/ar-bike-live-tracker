@@ -112,8 +112,13 @@ def _run_migrations_sync() -> None:
     from alembic import command
     from alembic.config import Config
 
+    # alembic.ini lives at the backend root (script_location is
+    # relative to %(there)s), not next to db.py.
     alembic_cfg = Config(
-        os.path.join(os.path.dirname(os.path.abspath(__file__)), "alembic.ini")
+        os.path.join(
+            os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+            "alembic.ini",
+        )
     )
     command.upgrade(alembic_cfg, "head")
 
