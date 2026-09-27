@@ -1,128 +1,124 @@
-import { useEffect, useState, useRef } from 'react';
-import { WebPubSubClient } from '@azure/web-pubsub-client';
-import { HubConnection, HubConnectionBuilder } from '@microsoft/signalr';
+import { useEffect, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import type { TelemetryDocument } from '../types';
-import api from '../utils/api';
+import { backendBase } from '../utils/api';
 import { telemetryQueryKeys } from './useTelemetryQueries';
 
-interface NegotiateResponse {
-  provider: 'signalr' | 'webpubsub';
-  url: string;
-}
-
+/**
+ * Native WebSocket subscription to the self-hosted hub (`/ws/telemetry`).
+ *
+ * Replaces the old Azure Web PubSub / SignalR negotiate flow. The server
+ * pushes each persisted telemetry document as a plain JSON message
+ * (`TelemetryDocument.to_cosmos_dict()` shape) to every client in the
+ * "telemetry" group.
+ *
+ * The `getAccessToken` callback is no longer used for the socket itself
+ * (the WS endpoint is unauthenticated) but is kept as a gate: pass it only
+ * when the user is authenticated, matching the previous behavior.
+ */
 export function useWebPubSub(getAccessToken?: () => Promise<string | null>) {
   const [latestEvent, setLatestEvent] = useState<TelemetryDocument | null>(null);
   const [isSubscribed, setIsSubscribed] = useState(false);
   const queryClient = useQueryClient();
 
-  const wpsClientRef = useRef<WebPubSubClient | null>(null);
-  const srConnectionRef = useRef<HubConnection | null>(null);
-
   useEffect(() => {
-    let isMounted = true;
+    if (!getAccessToken) return; // Do not connect if unauthenticated
 
-    async function initConnection() {
-      if (!getAccessToken) return; // Do not connect if unauthenticated
+    let disposed = false;
+    let socket: WebSocket | null = null;
+    let reconnectTimer: number | undefined;
+    let pingTimer: number | undefined;
+    let attempt = 0;
+
+    const wsUrl = () => `${backendBase.replace(/^http/, 'ws')}/ws/telemetry`;
+
+    const handleNewMessage = (doc: TelemetryDocument) => {
+      if (disposed) return;
+
+      // Update current telemetry cache
+      queryClient.setQueryData(telemetryQueryKeys.current(), doc);
+
+      if (doc.eventTriggered) {
+        // Set latest event for notification toast
+        setLatestEvent(doc);
+
+        // Update events list in cache
+        queryClient.setQueryData<TelemetryDocument[]>(
+          telemetryQueryKeys.events(),
+          (oldEvents = []) => {
+            // Add new event to the beginning, keep only last 50
+            return [doc, ...oldEvents].slice(0, 50);
+          }
+        );
+      }
+    };
+
+    const clearTimers = () => {
+      if (reconnectTimer !== undefined) window.clearTimeout(reconnectTimer);
+      if (pingTimer !== undefined) window.clearInterval(pingTimer);
+      reconnectTimer = undefined;
+      pingTimer = undefined;
+    };
+
+    const connect = () => {
+      if (disposed) return;
 
       try {
-        // 1. Fetch access token from backend using axios client
-        const res = await api.get<NegotiateResponse>('/api/pubsub/negotiate');
-        const { provider, url } = res.data;
-        console.log(`WebSocket Provider: ${provider}`);
-
-        const handleNewMessage = (doc: TelemetryDocument) => {
-          if (!isMounted) return;
-
-          // Update current telemetry cache
-          queryClient.setQueryData(telemetryQueryKeys.current(), doc);
-
-          if (doc.eventTriggered) {
-            // Set latest event for notification toast
-            setLatestEvent(doc);
-
-            // Update events list in cache
-            queryClient.setQueryData<TelemetryDocument[]>(
-              telemetryQueryKeys.events(),
-              (oldEvents = []) => {
-                // Add new event to the beginning, keep only last 50
-                return [doc, ...oldEvents].slice(0, 50);
-              }
-            );
-          }
-        };
-
-        if (provider === 'signalr') {
-          // Parse connection URL and extract access token
-          const urlObj = new URL(url);
-          const token = urlObj.searchParams.get("access_token") || "";
-          urlObj.searchParams.delete("access_token");
-
-          // Rebuild URL with current hostname in case of localhost/127.0.0.1 replacement
-          let serviceUrl = urlObj.toString();
-          serviceUrl = serviceUrl.replace('localhost', window.location.hostname).replace('127.0.0.1', window.location.hostname);
-
-          // 2. Init SignalR client with standard negotiation using accessTokenFactory
-          const connection = new HubConnectionBuilder()
-            .withUrl(serviceUrl, {
-              accessTokenFactory: () => Promise.resolve(token)
-            })
-            .withAutomaticReconnect()
-            .build();
-
-          srConnectionRef.current = connection;
-
-          connection.on("SendMessage", (doc: TelemetryDocument) => {
-            handleNewMessage(doc);
-          });
-
-          await connection.start();
-          if (isMounted) setIsSubscribed(true);
-          console.log("Connected to Azure SignalR Service/Emulator");
-        } else {
-          // 2. Init Web PubSub client
-          const client = new WebPubSubClient(url);
-          wpsClientRef.current = client;
-
-          const handleGroupOrServerMessage = (e: any) => {
-            let doc: TelemetryDocument;
-            if (typeof e.message.data === 'string') {
-              try {
-                doc = JSON.parse(e.message.data);
-              } catch (err) {
-                console.error("Failed to parse Web PubSub message data:", err);
-                return;
-              }
-            } else {
-              doc = e.message.data as any;
-            }
-            handleNewMessage(doc);
-          };
-
-          client.on("group-message", handleGroupOrServerMessage);
-          client.on("server-message", handleGroupOrServerMessage);
-
-          await client.start();
-          await client.joinGroup("telemetry");
-
-          if (isMounted) setIsSubscribed(true);
-          console.log("Connected to Azure Web PubSub Service");
-        }
-
+        socket = new WebSocket(wsUrl());
       } catch (err) {
-        console.error("Websocket Connection Error:", err);
+        console.error('WebSocket URL error:', err);
+        scheduleReconnect();
+        return;
       }
-    }
 
-    initConnection();
+      socket.onopen = () => {
+        if (disposed) return;
+        attempt = 0;
+        setIsSubscribed(true);
+        console.log('Connected to telemetry WebSocket hub');
+        // Keepalive so idle proxies don't drop the connection; the server
+        // consumes (and ignores) these frames.
+        pingTimer = window.setInterval(() => {
+          if (socket?.readyState === WebSocket.OPEN) socket.send('ping');
+        }, 30_000);
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          handleNewMessage(JSON.parse(event.data) as TelemetryDocument);
+        } catch (err) {
+          console.error('Failed to parse telemetry WebSocket message:', err);
+        }
+      };
+
+      socket.onclose = () => {
+        if (disposed) return;
+        setIsSubscribed(false);
+        scheduleReconnect();
+      };
+
+      socket.onerror = () => {
+        // onclose follows and handles the retry
+        socket?.close();
+      };
+    };
+
+    const scheduleReconnect = () => {
+      if (disposed) return;
+      clearTimers();
+      const delay = Math.min(1_000 * 2 ** attempt, 15_000);
+      attempt += 1;
+      reconnectTimer = window.setTimeout(connect, delay);
+    };
+
+    connect();
 
     return () => {
-      isMounted = false;
-      if (wpsClientRef.current) {
-        wpsClientRef.current.stop();
-      }
-      if (srConnectionRef.current) {
-        srConnectionRef.current.stop();
+      disposed = true;
+      clearTimers();
+      if (socket) {
+        socket.onclose = null;
+        socket.close();
       }
     };
   }, [getAccessToken, queryClient]);

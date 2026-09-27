@@ -11,8 +11,6 @@
   },
   "dependencies": {
     "@adolf94/ar-auth-client": "^1.2.4",
-    "@azure/web-pubsub-client": "^1.1.0",
-    "@microsoft/signalr": "^10.0.0",
     "@tailwindcss/vite": "^4.3.2",
     "@tanstack/query-sync-storage-persister": "^5.101.2",
     "@tanstack/react-query": "^5.101.2",

@@ -42,11 +42,6 @@ export interface LocationSearchResult {
   lon: number;
 }
 
-export interface SignalRNegotiation {
-  url: string;
-  accessToken: string;
-}
-
 export const hatidkuyaApi = {
   async createOrder(
     fromAddress: string,
@@ -115,15 +110,6 @@ export const hatidkuyaApi = {
   async completeOrder(orderId: string): Promise<OrderData> {
     const res = await api.post(`/api/orders/${orderId}/complete`);
     return res.data;
-  },
-
-  async negotiate(trackingId: string): Promise<SignalRNegotiation> {
-    const res = await api.post(`/api/negotiate/${trackingId}`);
-    return res.data;
-  },
-
-  async joinGroup(trackingId: string, connectionId: string): Promise<void> {
-    await api.post(`/api/join/${trackingId}`, { connectionId });
   },
 
   async searchLocations(query: string): Promise<LocationSearchResult[]> {
